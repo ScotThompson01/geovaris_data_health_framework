@@ -188,3 +188,86 @@ Data Access Layer
 PostgreSQL and External Services
 
 
+## 8. Technology Stack
+
+The GeoVaris Assessment Platform will use a modular technology stack designed to minimize prototype complexity while preserving a path to enterprise deployment.
+
+| Layer | Prototype Technology | Purpose |
+|---|---|---|
+| Web framework | Next.js | Application pages, server-side logic and API endpoints |
+| Programming language | TypeScript | Type-safe application development |
+| User interface | React | Reusable application components |
+| Styling | Tailwind CSS | Responsive layout and GeoVaris branding |
+| Hosting | Vercel | Application hosting, preview deployments and CI/CD |
+| Database | Neon PostgreSQL | Configuration, assessment and operational data |
+| Database access | Drizzle ORM | Type-safe database queries and schema migrations |
+| Authentication | Neon Auth | Prototype user registration, login and sessions |
+| Source control | GitHub | Version control, branches and pull requests |
+| File storage | Local prototype storage or Azure Blob Storage | Evidence files and generated reports |
+| AI services | OpenAI API | Future assisted findings, summaries and recommendations |
+| Production identity | Microsoft Entra ID with Auth.js | Customer authentication, MFA and enterprise identity |
+| Production domain | app.geovaris.com | Public address for the GDHF application |
+
+### Technology Selection Principles
+
+Technology decisions will favor:
+
+- Low prototype operating cost
+- Managed cloud services
+- Minimal infrastructure administration
+- Strong Next.js compatibility
+- Standard and portable data technologies
+- Security and tenant isolation
+- Incremental scalability
+- Clear migration paths
+- Avoidance of unnecessary vendor lock-in
+
+### PostgreSQL as the System of Record
+
+PostgreSQL will serve as the authoritative system of record for:
+
+- Organizations
+- Users and organization memberships
+- Clients
+- Assessment methodologies
+- Assessment templates and versions
+- Sections and questions
+- Scoring and recommendation configuration
+- Assessment responses
+- Scores
+- Findings
+- Recommendations
+- Roadmap items
+- Report metadata
+- Audit events
+
+Large binary files should not normally be stored directly in PostgreSQL.
+
+The database will instead store file metadata, ownership, storage location and access-control information.
+
+## 9. Prototype Architecture
+
+The prototype will use the simplest viable architecture needed to prove the complete assessment workflow.
+
+```text
+User Browser
+      │
+      ▼
+Next.js on Vercel
+      │
+      ├── Neon Auth
+      │
+      ├── Neon PostgreSQL
+      │
+      └── Prototype file storage
+
+  
+## Important architecture rule
+
+The platform should never use a person’s email address as the permanent primary key.
+
+Instead:
+
+```text
+users.id
+
