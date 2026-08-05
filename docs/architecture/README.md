@@ -1,12 +1,16 @@
-# GeoVaris Assessment Platform™
+                    GeoVaris Assessment Platform™
 
-![Next.js](https://img.shields.io/badge/Next.js-16-black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![React](https://img.shields.io/badge/React-19-61dafb)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-blue)
-![Status](https://img.shields.io/badge/Status-Architecture-orange)
-
-
+                            Organizations
+                                   │
+                            Assessment Engine
+                                   │
+          ┌───────────────┬────────┴────────┬───────────────┐
+          │               │                 │               │
+     Methodologies   Scoring Engine   Reporting      AI Assistant
+          │               │                 │               │
+          └───────────────┴─────────────────┴───────────────┘
+                                   │
+                             Executive Reports
 # GeoVaris Assessment Platform™ (GAP)
 
 > **Measure. Govern. Improve. Trust.**
