@@ -15,6 +15,13 @@
       "when": 1786039155140,
       "tag": "0001_fair_yellow_claw",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786042144380,
+      "tag": "0002_giant_rictor",
+      "breakpoints": true
     }
   ]
 }
