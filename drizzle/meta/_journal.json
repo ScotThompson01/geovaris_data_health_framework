@@ -29,6 +29,20 @@
       "when": 1786121749751,
       "tag": "0003_lovely_sumo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786122409272,
+      "tag": "0004_many_sleeper",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786123008259,
+      "tag": "0005_tiny_jetstream",
+      "breakpoints": true
     }
   ]
 }
