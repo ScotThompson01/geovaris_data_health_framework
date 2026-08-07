@@ -43,6 +43,13 @@
       "when": 1786123008259,
       "tag": "0005_tiny_jetstream",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786123902933,
+      "tag": "0006_wet_johnny_blaze",
+      "breakpoints": true
     }
   ]
 }
