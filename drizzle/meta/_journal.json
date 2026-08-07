@@ -22,6 +22,13 @@
       "when": 1786042144380,
       "tag": "0002_giant_rictor",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786121749751,
+      "tag": "0003_lovely_sumo",
+      "breakpoints": true
     }
   ]
 }

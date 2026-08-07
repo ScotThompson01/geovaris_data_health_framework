@@ -3,3 +3,4 @@ export * from "./client";
 export * from "./framework";
 export * from "./methodology";
 export * from "./assessment-template";
+export * from "./assessment-template-version";
