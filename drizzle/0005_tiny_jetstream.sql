@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "uq_template_section_version_code" ON "template_sections" USING btree ("template_version_id","code");
