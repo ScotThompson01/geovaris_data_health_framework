@@ -7,5 +7,6 @@ export * from "./assessment-template-version";
 export * from "./template-section";
 export * from "./template-question";
 export * from "./template-question-option";
+export * from "./assessment";
 
 
