@@ -48,6 +48,23 @@ export default async function AssessmentPage({
     overallScore,
   } = data;
 
+  // --------------------------------------------------
+  // Assessment Progress
+  // --------------------------------------------------
+
+  const totalQuestions = responses.length;
+
+  const answeredQuestions = responses.filter(
+    (question) => question.responseId !== null,
+  ).length;
+
+  const completionPercent =
+    totalQuestions === 0
+      ? 0
+      : Math.round(
+          (answeredQuestions / totalQuestions) * 100,
+        );
+
   const groupedSections = responses.reduce<
     Record<
       string,
@@ -133,6 +150,39 @@ export default async function AssessmentPage({
             </p>
           </div>
         </div>
+        {/* Assessment Progress */}
+
+        <div className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-slate-500">
+                Assessment Progress
+              </p>
+
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {answeredQuestions} of {totalQuestions} answered
+              </p>
+
+              <p className="mt-1 text-sm text-slate-500">
+                {completionPercent}% complete
+              </p>
+            </div>
+
+            <p className="text-3xl font-bold text-slate-900">
+              {completionPercent}%
+            </p>
+          </div>
+
+          <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200">
+            <div
+              className="h-full rounded-full bg-indigo-600 transition-all"
+              style={{
+                width: `${completionPercent}%`,
+              }}
+            />
+          </div>
+        </div>
+
 
         {/* Overall Score */}
 
