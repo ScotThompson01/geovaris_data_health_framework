@@ -9,5 +9,7 @@ export * from "./template-question";
 export * from "./template-question-option";
 export * from "./assessment";
 export * from "./assessment-response";
+export * from "./assessment-response-option";
+
 
 
