@@ -23,9 +23,9 @@ function formatScore(
     return score;
   }
 
-  return numericScore.toLocaleString(undefined, {
+  return `${numericScore.toLocaleString(undefined, {
     maximumFractionDigits: 2,
-  });
+  })}%`;
 }
 
 export default async function AssessmentPage({
@@ -145,7 +145,6 @@ export default async function AssessmentPage({
             {formatScore(
               overallScore?.normalizedScore,
             )}
-            %
           </p>
         </div>
 
@@ -176,7 +175,6 @@ export default async function AssessmentPage({
                         {formatScore(
                           sectionScore?.normalizedScore,
                         )}
-                        %
                       </p>
                     </div>
                   </div>
@@ -230,7 +228,6 @@ export default async function AssessmentPage({
                                   {formatScore(
                                     question.normalizedScore,
                                   )}
-                                  %
                                 </p>
                               </div>
                             </div>

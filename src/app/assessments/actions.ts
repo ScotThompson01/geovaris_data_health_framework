@@ -16,6 +16,8 @@ import {
   templateQuestions,
 } from "@/db/schema";
 
+import { recalculateAssessmentScores } from "@/db/services/assessment-scoring-service";
+
 export async function saveAssessmentResponse(
   formData: FormData,
 ) {
@@ -211,6 +213,9 @@ export async function saveAssessmentResponse(
   // Refresh Assessment Page
   // --------------------------------------------------
 
+  await recalculateAssessmentScores(
+  assessment.id,
+);
   revalidatePath(
     `/assessments/${assessmentCode}`,
   );
