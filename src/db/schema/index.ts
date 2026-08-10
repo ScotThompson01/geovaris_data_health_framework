@@ -8,5 +8,6 @@ export * from "./template-section";
 export * from "./template-question";
 export * from "./template-question-option";
 export * from "./assessment";
+export * from "./assessment-response";
 
 
