@@ -1,10 +1,15 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { db } from "./client";
 import {
   assessmentMethodologies,
+  assessmentResponseScores,
+  assessmentResponses,
+  assessments,
+  assessmentScores,
   assessmentTemplates,
   assessmentTemplateVersions,
+  clients,
   frameworks,
   organizations,
   templateQuestionOptions,
@@ -368,23 +373,291 @@ async function seed() {
   }
 
   // ==================================================
+  // 9. GeoVaris Demo Client
+  // ==================================================
+
+  let [demoClient] = await db
+    .select()
+    .from(clients)
+    .where(
+      and(
+        eq(clients.organizationId, geovaris.id),
+        eq(clients.name, "GeoVaris Demo Client"),
+      ),
+    )
+    .limit(1);
+
+  if (!demoClient) {
+    [demoClient] = await db
+      .insert(clients)
+      .values({
+        organizationId: geovaris.id,
+        name: "GeoVaris Demo Client",
+        legalName: "GeoVaris Demo Client",
+        industry: "Demonstration",
+        status: "active",
+        description:
+          "Internal demonstration client used to validate the GeoVaris Assessment Platform.",
+      })
+      .returning();
+
+    console.log("Created client: GeoVaris Demo Client");
+  } else {
+    console.log("Client already exists: GeoVaris Demo Client");
+  }
+
+  // ==================================================
+  // 10. GDHF Demo Assessment
+  // ==================================================
+
+  let [demoAssessment] = await db
+    .select()
+    .from(assessments)
+    .where(
+      and(
+        eq(assessments.organizationId, geovaris.id),
+        eq(assessments.assessmentCode, "GDHF-DEMO-001"),
+      ),
+    )
+    .limit(1);
+
+  if (!demoAssessment) {
+    [demoAssessment] = await db
+      .insert(assessments)
+      .values({
+        organizationId: geovaris.id,
+        clientId: demoClient.id,
+        frameworkId: gdhf.id,
+        methodologyId: methodology.id,
+        templateId: template.id,
+        templateVersionId: templateVersion.id,
+        assessmentCode: "GDHF-DEMO-001",
+        name: "GeoVaris Demo Data Health Assessment",
+        description:
+          "Prototype assessment used to validate the GDHF execution and scoring workflow.",
+        status: "in_progress",
+      })
+      .returning();
+
+    console.log("Created assessment: GDHF-DEMO-001");
+  } else {
+    console.log("Assessment already exists: GDHF-DEMO-001");
+  }
+
+  // ==================================================
+  // 11. Find GOV-001 YES Option
+  // ==================================================
+
+  const [yesOption] = await db
+    .select()
+    .from(templateQuestionOptions)
+    .where(
+      and(
+        eq(
+          templateQuestionOptions.questionId,
+          governanceQuestion.id,
+        ),
+        eq(templateQuestionOptions.optionCode, "YES"),
+      ),
+    )
+    .limit(1);
+
+  if (!yesOption) {
+    throw new Error(
+      "GOV-001 YES option was not found. Run configuration seed first.",
+    );
+  }
+
+  // ==================================================
+  // 12. GOV-001 Assessment Response
+  // ==================================================
+
+  let [demoResponse] = await db
+    .select()
+    .from(assessmentResponses)
+    .where(
+      and(
+        eq(
+          assessmentResponses.assessmentId,
+          demoAssessment.id,
+        ),
+        eq(
+          assessmentResponses.questionId,
+          governanceQuestion.id,
+        ),
+      ),
+    )
+    .limit(1);
+
+  if (!demoResponse) {
+    [demoResponse] = await db
+      .insert(assessmentResponses)
+      .values({
+        organizationId: geovaris.id,
+        assessmentId: demoAssessment.id,
+        questionId: governanceQuestion.id,
+        selectedOptionId: yesOption.id,
+        respondentComment:
+          "The organization has documented ownership for important data.",
+        status: "submitted",
+        submittedAt: new Date(),
+      })
+      .returning();
+
+    console.log("Created response: GOV-001 = YES");
+  } else {
+    console.log("Response already exists: GOV-001");
+  }
+
+  // ==================================================
+  // 13. GOV-001 Response Score
+  // ==================================================
+
+  let [responseScore] = await db
+    .select()
+    .from(assessmentResponseScores)
+    .where(
+      eq(
+        assessmentResponseScores.assessmentResponseId,
+        demoResponse.id,
+      ),
+    )
+    .limit(1);
+
+  if (!responseScore) {
+    [responseScore] = await db
+      .insert(assessmentResponseScores)
+      .values({
+        organizationId: geovaris.id,
+        assessmentId: demoAssessment.id,
+        assessmentResponseId: demoResponse.id,
+        questionId: governanceQuestion.id,
+        rawScore: "4",
+        maximumScore: "4",
+        normalizedScore: "100",
+        questionWeight: "1",
+        weightedScore: "4",
+        scoringStatus: "calculated",
+        scoringNotes:
+          "Prototype score calculated from GOV-001 YES response.",
+        calculatedAt: new Date(),
+      })
+      .returning();
+
+    console.log("Created response score: GOV-001 = 100%");
+  } else {
+    console.log("Response score already exists: GOV-001");
+  }
+
+  // ==================================================
+  // 14. Data Governance Section Score
+  // ==================================================
+
+  let [sectionScore] = await db
+    .select()
+    .from(assessmentScores)
+    .where(
+      and(
+        eq(
+          assessmentScores.assessmentId,
+          demoAssessment.id,
+        ),
+        eq(assessmentScores.scoreScope, "section"),
+        eq(
+          assessmentScores.sectionId,
+          governanceSection.id,
+        ),
+      ),
+    )
+    .limit(1);
+
+  if (!sectionScore) {
+    [sectionScore] = await db
+      .insert(assessmentScores)
+      .values({
+        organizationId: geovaris.id,
+        assessmentId: demoAssessment.id,
+        sectionId: governanceSection.id,
+        scoreScope: "section",
+        rawScore: "4",
+        maximumScore: "4",
+        normalizedScore: "100",
+        weightedScore: "4",
+        scoringStatus: "calculated",
+        scoringNotes:
+          "Prototype Data Governance section score.",
+        calculatedAt: new Date(),
+      })
+      .returning();
+
+    console.log("Created section score: Data Governance = 100%");
+  } else {
+    console.log(
+      "Section score already exists: Data Governance",
+    );
+  }
+
+  // ==================================================
+  // 15. Overall Assessment Score
+  // ==================================================
+
+  let [overallScore] = await db
+    .select()
+    .from(assessmentScores)
+    .where(
+      and(
+        eq(
+          assessmentScores.assessmentId,
+          demoAssessment.id,
+        ),
+        eq(assessmentScores.scoreScope, "overall"),
+        isNull(assessmentScores.sectionId),
+      ),
+    )
+    .limit(1);
+
+  if (!overallScore) {
+    [overallScore] = await db
+      .insert(assessmentScores)
+      .values({
+        organizationId: geovaris.id,
+        assessmentId: demoAssessment.id,
+        sectionId: null,
+        scoreScope: "overall",
+        rawScore: "4",
+        maximumScore: "4",
+        normalizedScore: "100",
+        weightedScore: "4",
+        scoringStatus: "calculated",
+        scoringNotes:
+          "Prototype overall GDHF assessment score.",
+        calculatedAt: new Date(),
+      })
+      .returning();
+
+    console.log("Created overall assessment score: 100%");
+  } else {
+    console.log("Overall assessment score already exists");
+  }
+  
+  // ==================================================
   // Complete
   // ==================================================
 
   console.log("----------------------------------------");
-  console.log("GDHF seed validation configuration ready.");
+  console.log("GDHF end-to-end validation complete.");
   console.log("----------------------------------------");
   console.log("GeoVaris");
-  console.log("└── GDHF");
-  console.log("    └── Data Health Assessment Methodology");
-  console.log("        └── Small Business Data Health Assessment");
-  console.log("            └── Version 1.0");
-  console.log("                └── Data Governance");
-  console.log("                    └── GOV-001");
-  console.log("                        ├── No");
-  console.log("                        ├── Partially");
-  console.log("                        ├── Yes");
-  console.log("                        └── Not Applicable");
+  console.log("├── GDHF Configuration");
+  console.log("│   └── GOV-001");
+  console.log("│       └── YES = 4 points");
+  console.log("│");
+  console.log("└── GeoVaris Demo Client");
+  console.log("    └── GDHF-DEMO-001");
+  console.log("        └── GOV-001 Response: YES");
+  console.log("            └── Response Score: 100%");
+  console.log("                └── Section Score: 100%");
+  console.log("                    └── Overall Score: 100%");
   console.log("----------------------------------------");
 
   console.log("Database seed complete.");
