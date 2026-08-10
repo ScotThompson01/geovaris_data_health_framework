@@ -8,15 +8,15 @@ import {
 import { db } from "@/db/client";
 
 import {
+  assessmentMethodologies,
   assessmentResponseScores,
   assessmentResponses,
   assessments,
   assessmentScores,
-  assessmentTemplateVersions,
   assessmentTemplates,
+  assessmentTemplateVersions,
   clients,
   frameworks,
-  assessmentMethodologies,
   templateQuestionOptions,
   templateQuestions,
   templateSections,
@@ -35,17 +35,13 @@ export async function getAssessmentRunnerByCode(
       assessmentCode: assessments.assessmentCode,
       assessmentName: assessments.name,
       assessmentStatus: assessments.status,
+      templateVersionId: assessments.templateVersionId,
 
       clientName: clients.name,
-
       frameworkName: frameworks.name,
-
       methodologyName: assessmentMethodologies.name,
-
       templateName: assessmentTemplates.name,
-
-      versionLabel:
-        assessmentTemplateVersions.versionLabel,
+      versionLabel: assessmentTemplateVersions.versionLabel,
     })
     .from(assessments)
     .innerJoin(
@@ -90,7 +86,7 @@ export async function getAssessmentRunnerByCode(
   }
 
   // --------------------------------------------------
-  // Questions + Responses + Response Scores
+  // All Questions + Existing Responses + Scores
   // --------------------------------------------------
 
   const responses = await db
@@ -128,19 +124,25 @@ export async function getAssessmentRunnerByCode(
       weightedScore:
         assessmentResponseScores.weightedScore,
     })
-    .from(assessmentResponses)
-    .innerJoin(
-      templateQuestions,
-      eq(
-        templateQuestions.id,
-        assessmentResponses.questionId,
-      ),
-    )
+    .from(templateQuestions)
     .innerJoin(
       templateSections,
       eq(
         templateSections.id,
         templateQuestions.sectionId,
+      ),
+    )
+    .leftJoin(
+      assessmentResponses,
+      and(
+        eq(
+          assessmentResponses.questionId,
+          templateQuestions.id,
+        ),
+        eq(
+          assessmentResponses.assessmentId,
+          assessment.id,
+        ),
       ),
     )
     .leftJoin(
@@ -159,13 +161,49 @@ export async function getAssessmentRunnerByCode(
     )
     .where(
       eq(
-        assessmentResponses.assessmentId,
-        assessment.id,
+        templateSections.templateVersionId,
+        assessment.templateVersionId,
       ),
     )
     .orderBy(
       asc(templateSections.displayOrder),
       asc(templateQuestions.displayOrder),
+    );
+
+  // --------------------------------------------------
+  // Available Question Options
+  // --------------------------------------------------
+
+  const availableOptions = await db
+    .select({
+      questionId: templateQuestionOptions.questionId,
+      optionId: templateQuestionOptions.id,
+      optionCode: templateQuestionOptions.optionCode,
+      optionLabel: templateQuestionOptions.optionLabel,
+      optionDescription:
+        templateQuestionOptions.optionDescription,
+      optionValue: templateQuestionOptions.optionValue,
+      scoreValue: templateQuestionOptions.scoreValue,
+      displayOrder: templateQuestionOptions.displayOrder,
+      isNotApplicable:
+        templateQuestionOptions.isNotApplicable,
+    })
+    .from(templateQuestionOptions)
+    .innerJoin(
+      templateQuestions,
+      eq(
+        templateQuestions.id,
+        templateQuestionOptions.questionId,
+      ),
+    )
+    .where(
+      eq(
+        templateQuestions.templateVersionId,
+        assessment.templateVersionId,
+      ),
+    )
+    .orderBy(
+      asc(templateQuestionOptions.displayOrder),
     );
 
   // --------------------------------------------------
@@ -175,12 +213,19 @@ export async function getAssessmentRunnerByCode(
   const sectionScores = await db
     .select({
       sectionId: assessmentScores.sectionId,
-      normalizedScore:
-        assessmentScores.normalizedScore,
+
       rawScore:
         assessmentScores.rawScore,
+
       maximumScore:
         assessmentScores.maximumScore,
+
+      normalizedScore:
+        assessmentScores.normalizedScore,
+
+      weightedScore:
+        assessmentScores.weightedScore,
+
       scoringStatus:
         assessmentScores.scoringStatus,
     })
@@ -204,12 +249,18 @@ export async function getAssessmentRunnerByCode(
 
   const [overallScore] = await db
     .select({
-      normalizedScore:
-        assessmentScores.normalizedScore,
       rawScore:
         assessmentScores.rawScore,
+
       maximumScore:
         assessmentScores.maximumScore,
+
+      normalizedScore:
+        assessmentScores.normalizedScore,
+
+      weightedScore:
+        assessmentScores.weightedScore,
+
       scoringStatus:
         assessmentScores.scoringStatus,
     })
@@ -232,6 +283,7 @@ export async function getAssessmentRunnerByCode(
   return {
     assessment,
     responses,
+    availableOptions,
     sectionScores,
     overallScore: overallScore ?? null,
   };
