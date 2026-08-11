@@ -1,12 +1,12 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "./client";
+import { recalculateAssessmentScores } from "./services/assessment-scoring-service";
+
 import {
   assessmentMethodologies,
-  assessmentResponseScores,
   assessmentResponses,
   assessments,
-  assessmentScores,
   assessmentTemplates,
   assessmentTemplateVersions,
   clients,
@@ -16,6 +16,191 @@ import {
   templateQuestions,
   templateSections,
 } from "./schema";
+
+// ==================================================
+// GDHF Prototype Assessment Definition
+// ==================================================
+
+const assessmentDefinition = [
+  {
+    code: "GOV",
+    name: "Data Governance",
+    description:
+      "Evaluates ownership, stewardship, policies, standards, and accountability for organizational data.",
+    displayOrder: 1,
+    questions: [
+      {
+        code: "GOV-001",
+        text:
+          "Does the organization have clearly defined ownership for important data?",
+        guidance:
+          "Consider whether critical datasets have identified business owners who are accountable for data definition, quality, access, and appropriate use.",
+        displayOrder: 1,
+      },
+      {
+        code: "GOV-002",
+        text:
+          "Are data stewardship responsibilities clearly defined and understood?",
+        guidance:
+          "Consider whether individuals responsible for day-to-day data quality, definitions, and issue resolution have been identified.",
+        displayOrder: 2,
+      },
+      {
+        code: "GOV-003",
+        text:
+          "Does the organization maintain documented data policies and standards?",
+        guidance:
+          "Consider whether standards exist for data naming, ownership, quality, access, retention, and acceptable use.",
+        displayOrder: 3,
+      },
+    ],
+  },
+
+  {
+    code: "DQ",
+    name: "Data Quality",
+    description:
+      "Evaluates the controls, monitoring, and processes used to maintain trusted and reliable data.",
+    displayOrder: 2,
+    questions: [
+      {
+        code: "DQ-001",
+        text:
+          "Are important datasets subject to defined data-quality checks?",
+        guidance:
+          "Consider completeness, validity, consistency, accuracy, uniqueness, and timeliness controls.",
+        displayOrder: 1,
+      },
+      {
+        code: "DQ-002",
+        text:
+          "Are recurring data-quality issues tracked to their source and corrected?",
+        guidance:
+          "Consider whether recurring errors are documented, assigned, root-caused, and permanently remediated.",
+        displayOrder: 2,
+      },
+      {
+        code: "DQ-003",
+        text:
+          "Is the completeness of critical business data regularly measured?",
+        guidance:
+          "Consider whether required fields, records, and business-critical attributes are monitored for missing or incomplete values.",
+        displayOrder: 3,
+      },
+    ],
+  },
+
+  {
+    code: "AN",
+    name: "Analytics & Reporting",
+    description:
+      "Evaluates the consistency, reliability, and automation of reporting and analytics processes.",
+    displayOrder: 3,
+    questions: [
+      {
+        code: "AN-001",
+        text:
+          "Do executive reports use consistently defined business metrics?",
+        guidance:
+          "Consider whether important KPIs have common definitions and produce consistent results across departments and reporting tools.",
+        displayOrder: 1,
+      },
+      {
+        code: "AN-002",
+        text:
+          "Are important reports built from trusted and governed data sources?",
+        guidance:
+          "Consider whether report data sources are documented, approved, understood, and monitored for quality.",
+        displayOrder: 2,
+      },
+      {
+        code: "AN-003",
+        text:
+          "Are recurring reporting and analytics processes substantially automated?",
+        guidance:
+          "Consider whether manual extraction, spreadsheet manipulation, reconciliation, and report preparation have been reduced through repeatable workflows.",
+        displayOrder: 3,
+      },
+    ],
+  },
+
+  {
+    code: "AI",
+    name: "AI Readiness",
+    description:
+      "Evaluates whether organizational data is sufficiently governed, documented, accessible, and trusted to support responsible AI adoption.",
+    displayOrder: 4,
+    questions: [
+      {
+        code: "AI-001",
+        text:
+          "Does the organization have trusted and governed data suitable for AI use cases?",
+        guidance:
+          "Consider whether candidate AI datasets have known ownership, quality, lineage, access controls, and appropriate usage rights.",
+        displayOrder: 1,
+      },
+      {
+        code: "AI-002",
+        text:
+          "Is important data sufficiently documented for analytics and AI teams to understand and use correctly?",
+        guidance:
+          "Consider whether business definitions, metadata, lineage, context, and known limitations are available.",
+        displayOrder: 2,
+      },
+      {
+        code: "AI-003",
+        text:
+          "Are access controls and data-use rules defined for sensitive data used in analytics or AI?",
+        guidance:
+          "Consider privacy, security, authorized use, data classification, and restrictions on sensitive information.",
+        displayOrder: 3,
+      },
+    ],
+  },
+];
+
+const standardAnswerOptions = [
+  {
+    optionCode: "NO",
+    optionLabel: "No",
+    optionDescription:
+      "The capability is not currently established or consistently practiced.",
+    optionValue: "no",
+    scoreValue: "0",
+    displayOrder: 1,
+    isNotApplicable: false,
+  },
+  {
+    optionCode: "PARTIAL",
+    optionLabel: "Partially",
+    optionDescription:
+      "The capability exists in some areas or is implemented inconsistently.",
+    optionValue: "partial",
+    scoreValue: "2",
+    displayOrder: 2,
+    isNotApplicable: false,
+  },
+  {
+    optionCode: "YES",
+    optionLabel: "Yes",
+    optionDescription:
+      "The capability is clearly established and consistently practiced.",
+    optionValue: "yes",
+    scoreValue: "4",
+    displayOrder: 3,
+    isNotApplicable: false,
+  },
+  {
+    optionCode: "NA",
+    optionLabel: "Not Applicable",
+    optionDescription:
+      "The question does not apply to the current assessment scope.",
+    optionValue: "not_applicable",
+    scoreValue: null,
+    displayOrder: 4,
+    isNotApplicable: true,
+  },
+];
 
 async function seed() {
   console.log("Starting GeoVaris database seed...");
@@ -93,7 +278,10 @@ async function seed() {
     .where(
       and(
         eq(assessmentMethodologies.frameworkId, gdhf.id),
-        eq(assessmentMethodologies.code, "DATA-HEALTH"),
+        eq(
+          assessmentMethodologies.code,
+          "DATA-HEALTH",
+        ),
       ),
     )
     .limit(1);
@@ -131,7 +319,10 @@ async function seed() {
     .from(assessmentTemplates)
     .where(
       and(
-        eq(assessmentTemplates.methodologyId, methodology.id),
+        eq(
+          assessmentTemplates.methodologyId,
+          methodology.id,
+        ),
         eq(
           assessmentTemplates.name,
           "Small Business Data Health Assessment",
@@ -172,8 +363,14 @@ async function seed() {
     .from(assessmentTemplateVersions)
     .where(
       and(
-        eq(assessmentTemplateVersions.templateId, template.id),
-        eq(assessmentTemplateVersions.versionNumber, 1),
+        eq(
+          assessmentTemplateVersions.templateId,
+          template.id,
+        ),
+        eq(
+          assessmentTemplateVersions.versionNumber,
+          1,
+        ),
       ),
     )
     .limit(1);
@@ -187,193 +384,185 @@ async function seed() {
         versionNumber: 1,
         versionLabel: "1.0",
         status: "published",
-        changeSummary: "Initial GDHF prototype assessment version.",
+        changeSummary:
+          "Initial GDHF prototype assessment version.",
         publishedAt: new Date(),
       })
       .returning();
 
     console.log("Created template version: 1.0");
   } else {
-    console.log("Template version already exists: 1.0");
+    console.log(
+      "Template version already exists: 1.0",
+    );
   }
 
   // ==================================================
-  // 6. Data Governance Section
+  // 6. Seed Assessment Sections, Questions, and Options
   // ==================================================
 
-  let [governanceSection] = await db
-    .select()
-    .from(templateSections)
-    .where(
-      and(
-        eq(
-          templateSections.templateVersionId,
-          templateVersion.id,
-        ),
-        eq(templateSections.code, "GOV"),
-      ),
-    )
-    .limit(1);
+  let governanceQuestion:
+    | typeof templateQuestions.$inferSelect
+    | undefined;
 
-  if (!governanceSection) {
-    [governanceSection] = await db
-      .insert(templateSections)
-      .values({
-        organizationId: geovaris.id,
-        templateVersionId: templateVersion.id,
-        name: "Data Governance",
-        code: "GOV",
-        description:
-          "Evaluates organizational ownership, stewardship, policies, standards, and accountability for data.",
-        displayOrder: 1,
-        isRequired: true,
-        status: "active",
-      })
-      .returning();
-
-    console.log("Created section: Data Governance");
-  } else {
-    console.log("Section already exists: Data Governance");
-  }
-
-  // ==================================================
-  // 7. GOV-001 Question
-  // ==================================================
-
-  let [governanceQuestion] = await db
-    .select()
-    .from(templateQuestions)
-    .where(
-      and(
-        eq(
-          templateQuestions.templateVersionId,
-          templateVersion.id,
-        ),
-        eq(templateQuestions.questionCode, "GOV-001"),
-      ),
-    )
-    .limit(1);
-
-  if (!governanceQuestion) {
-    [governanceQuestion] = await db
-      .insert(templateQuestions)
-      .values({
-        organizationId: geovaris.id,
-        templateVersionId: templateVersion.id,
-        sectionId: governanceSection.id,
-        questionCode: "GOV-001",
-        questionText:
-          "Does the organization have clearly defined ownership for important data?",
-        guidanceText:
-          "Consider whether critical datasets have identified business owners who are accountable for data definition, quality, access, and appropriate use.",
-        answerType: "single_select",
-        displayOrder: 1,
-        isRequired: true,
-        allowsNotApplicable: true,
-        requiresComment: false,
-        requiresEvidence: false,
-        status: "active",
-      })
-      .returning();
-
-    console.log("Created question: GOV-001");
-  } else {
-    console.log("Question already exists: GOV-001");
-  }
-
-  // ==================================================
-  // 8. GOV-001 Answer Options
-  // ==================================================
-
-  const answerOptions = [
-    {
-      optionCode: "NO",
-      optionLabel: "No",
-      optionDescription:
-        "Important data does not have clearly identified ownership.",
-      optionValue: "no",
-      scoreValue: "0",
-      displayOrder: 1,
-      isNotApplicable: false,
-    },
-    {
-      optionCode: "PARTIAL",
-      optionLabel: "Partially",
-      optionDescription:
-        "Ownership exists informally or only for some important data.",
-      optionValue: "partial",
-      scoreValue: "2",
-      displayOrder: 2,
-      isNotApplicable: false,
-    },
-    {
-      optionCode: "YES",
-      optionLabel: "Yes",
-      optionDescription:
-        "Important data has clearly identified and documented ownership.",
-      optionValue: "yes",
-      scoreValue: "4",
-      displayOrder: 3,
-      isNotApplicable: false,
-    },
-    {
-      optionCode: "NA",
-      optionLabel: "Not Applicable",
-      optionDescription:
-        "The question does not apply to the assessment scope.",
-      optionValue: "not_applicable",
-      scoreValue: null,
-      displayOrder: 4,
-      isNotApplicable: true,
-    },
-  ];
-
-  for (const option of answerOptions) {
-    const [existingOption] = await db
+  for (const sectionDefinition of assessmentDefinition) {
+    let [section] = await db
       .select()
-      .from(templateQuestionOptions)
+      .from(templateSections)
       .where(
         and(
           eq(
-            templateQuestionOptions.questionId,
-            governanceQuestion.id,
+            templateSections.templateVersionId,
+            templateVersion.id,
           ),
           eq(
-            templateQuestionOptions.optionCode,
-            option.optionCode,
+            templateSections.code,
+            sectionDefinition.code,
           ),
         ),
       )
       .limit(1);
 
-    if (!existingOption) {
-      await db.insert(templateQuestionOptions).values({
-        organizationId: geovaris.id,
-        questionId: governanceQuestion.id,
-        optionCode: option.optionCode,
-        optionLabel: option.optionLabel,
-        optionDescription: option.optionDescription,
-        optionValue: option.optionValue,
-        scoreValue: option.scoreValue,
-        displayOrder: option.displayOrder,
-        isNotApplicable: option.isNotApplicable,
-        requiresComment: false,
-        requiresEvidence: false,
-        status: "active",
-      });
+    if (!section) {
+      [section] = await db
+        .insert(templateSections)
+        .values({
+          organizationId: geovaris.id,
+          templateVersionId: templateVersion.id,
+          name: sectionDefinition.name,
+          code: sectionDefinition.code,
+          description:
+            sectionDefinition.description,
+          displayOrder:
+            sectionDefinition.displayOrder,
+          isRequired: true,
+          status: "active",
+        })
+        .returning();
 
       console.log(
-        `Created GOV-001 option: ${option.optionLabel}`,
+        `Created section: ${sectionDefinition.name}`,
       );
     } else {
       console.log(
-        `GOV-001 option already exists: ${option.optionLabel}`,
+        `Section already exists: ${sectionDefinition.name}`,
       );
+    }
+
+    for (const questionDefinition of sectionDefinition.questions) {
+      let [question] = await db
+        .select()
+        .from(templateQuestions)
+        .where(
+          and(
+            eq(
+              templateQuestions.templateVersionId,
+              templateVersion.id,
+            ),
+            eq(
+              templateQuestions.questionCode,
+              questionDefinition.code,
+            ),
+          ),
+        )
+        .limit(1);
+
+      if (!question) {
+        [question] = await db
+          .insert(templateQuestions)
+          .values({
+            organizationId: geovaris.id,
+            templateVersionId:
+              templateVersion.id,
+            sectionId: section.id,
+            questionCode:
+              questionDefinition.code,
+            questionText:
+              questionDefinition.text,
+            guidanceText:
+              questionDefinition.guidance,
+            answerType: "single_select",
+            displayOrder:
+              questionDefinition.displayOrder,
+            weight: "1",
+            isRequired: true,
+            allowsNotApplicable: true,
+            requiresComment: false,
+            requiresEvidence: false,
+            status: "active",
+          })
+          .returning();
+
+        console.log(
+          `Created question: ${questionDefinition.code}`,
+        );
+      } else {
+        console.log(
+          `Question already exists: ${questionDefinition.code}`,
+        );
+      }
+
+      if (
+        questionDefinition.code === "GOV-001"
+      ) {
+        governanceQuestion = question;
+      }
+
+      for (const option of standardAnswerOptions) {
+        const [existingOption] = await db
+          .select()
+          .from(templateQuestionOptions)
+          .where(
+            and(
+              eq(
+                templateQuestionOptions.questionId,
+                question.id,
+              ),
+              eq(
+                templateQuestionOptions.optionCode,
+                option.optionCode,
+              ),
+            ),
+          )
+          .limit(1);
+
+        if (!existingOption) {
+          await db
+            .insert(templateQuestionOptions)
+            .values({
+              organizationId: geovaris.id,
+              questionId: question.id,
+              optionCode: option.optionCode,
+              optionLabel: option.optionLabel,
+              optionDescription:
+                option.optionDescription,
+              optionValue: option.optionValue,
+              scoreValue: option.scoreValue,
+              displayOrder:
+                option.displayOrder,
+              isNotApplicable:
+                option.isNotApplicable,
+              requiresComment: false,
+              requiresEvidence: false,
+              status: "active",
+            });
+
+          console.log(
+            `Created ${questionDefinition.code} option: ${option.optionLabel}`,
+          );
+        }
+      }
     }
   }
 
+  if (!governanceQuestion) {
+    throw new Error(
+      "GOV-001 was not found after assessment configuration seed.",
+    );
+  }
+
   // ==================================================
-  // 9. GeoVaris Demo Client
+  // 7. GeoVaris Demo Client
   // ==================================================
 
   let [demoClient] = await db
@@ -381,8 +570,14 @@ async function seed() {
     .from(clients)
     .where(
       and(
-        eq(clients.organizationId, geovaris.id),
-        eq(clients.name, "GeoVaris Demo Client"),
+        eq(
+          clients.organizationId,
+          geovaris.id,
+        ),
+        eq(
+          clients.name,
+          "GeoVaris Demo Client",
+        ),
       ),
     )
     .limit(1);
@@ -401,13 +596,17 @@ async function seed() {
       })
       .returning();
 
-    console.log("Created client: GeoVaris Demo Client");
+    console.log(
+      "Created client: GeoVaris Demo Client",
+    );
   } else {
-    console.log("Client already exists: GeoVaris Demo Client");
+    console.log(
+      "Client already exists: GeoVaris Demo Client",
+    );
   }
 
   // ==================================================
-  // 10. GDHF Demo Assessment
+  // 8. GDHF Demo Assessment
   // ==================================================
 
   let [demoAssessment] = await db
@@ -415,8 +614,14 @@ async function seed() {
     .from(assessments)
     .where(
       and(
-        eq(assessments.organizationId, geovaris.id),
-        eq(assessments.assessmentCode, "GDHF-DEMO-001"),
+        eq(
+          assessments.organizationId,
+          geovaris.id,
+        ),
+        eq(
+          assessments.assessmentCode,
+          "GDHF-DEMO-001",
+        ),
       ),
     )
     .limit(1);
@@ -430,46 +635,33 @@ async function seed() {
         frameworkId: gdhf.id,
         methodologyId: methodology.id,
         templateId: template.id,
-        templateVersionId: templateVersion.id,
-        assessmentCode: "GDHF-DEMO-001",
-        name: "GeoVaris Demo Data Health Assessment",
+        templateVersionId:
+          templateVersion.id,
+        assessmentCode:
+          "GDHF-DEMO-001",
+        name:
+          "GeoVaris Demo Data Health Assessment",
         description:
           "Prototype assessment used to validate the GDHF execution and scoring workflow.",
         status: "in_progress",
       })
       .returning();
 
-    console.log("Created assessment: GDHF-DEMO-001");
+    console.log(
+      "Created assessment: GDHF-DEMO-001",
+    );
   } else {
-    console.log("Assessment already exists: GDHF-DEMO-001");
-  }
-
-  // ==================================================
-  // 11. Find GOV-001 YES Option
-  // ==================================================
-
-  const [yesOption] = await db
-    .select()
-    .from(templateQuestionOptions)
-    .where(
-      and(
-        eq(
-          templateQuestionOptions.questionId,
-          governanceQuestion.id,
-        ),
-        eq(templateQuestionOptions.optionCode, "YES"),
-      ),
-    )
-    .limit(1);
-
-  if (!yesOption) {
-    throw new Error(
-      "GOV-001 YES option was not found. Run configuration seed first.",
+    console.log(
+      "Assessment already exists: GDHF-DEMO-001",
     );
   }
 
   // ==================================================
-  // 12. GOV-001 Assessment Response
+  // 9. Preserve / Create GOV-001 Demo Response
+  //
+  // Only GOV-001 is seeded with a response.
+  // The other 11 questions intentionally remain
+  // unanswered so progress tracking can be validated.
   // ==================================================
 
   let [demoResponse] = await db
@@ -490,6 +682,29 @@ async function seed() {
     .limit(1);
 
   if (!demoResponse) {
+    const [yesOption] = await db
+      .select()
+      .from(templateQuestionOptions)
+      .where(
+        and(
+          eq(
+            templateQuestionOptions.questionId,
+            governanceQuestion.id,
+          ),
+          eq(
+            templateQuestionOptions.optionCode,
+            "YES",
+          ),
+        ),
+      )
+      .limit(1);
+
+    if (!yesOption) {
+      throw new Error(
+        "GOV-001 YES option was not found.",
+      );
+    }
+
     [demoResponse] = await db
       .insert(assessmentResponses)
       .values({
@@ -504,162 +719,66 @@ async function seed() {
       })
       .returning();
 
-    console.log("Created response: GOV-001 = YES");
-  } else {
-    console.log("Response already exists: GOV-001");
-  }
-
-  // ==================================================
-  // 13. GOV-001 Response Score
-  // ==================================================
-
-  let [responseScore] = await db
-    .select()
-    .from(assessmentResponseScores)
-    .where(
-      eq(
-        assessmentResponseScores.assessmentResponseId,
-        demoResponse.id,
-      ),
-    )
-    .limit(1);
-
-  if (!responseScore) {
-    [responseScore] = await db
-      .insert(assessmentResponseScores)
-      .values({
-        organizationId: geovaris.id,
-        assessmentId: demoAssessment.id,
-        assessmentResponseId: demoResponse.id,
-        questionId: governanceQuestion.id,
-        rawScore: "4",
-        maximumScore: "4",
-        normalizedScore: "100",
-        questionWeight: "1",
-        weightedScore: "4",
-        scoringStatus: "calculated",
-        scoringNotes:
-          "Prototype score calculated from GOV-001 YES response.",
-        calculatedAt: new Date(),
-      })
-      .returning();
-
-    console.log("Created response score: GOV-001 = 100%");
-  } else {
-    console.log("Response score already exists: GOV-001");
-  }
-
-  // ==================================================
-  // 14. Data Governance Section Score
-  // ==================================================
-
-  let [sectionScore] = await db
-    .select()
-    .from(assessmentScores)
-    .where(
-      and(
-        eq(
-          assessmentScores.assessmentId,
-          demoAssessment.id,
-        ),
-        eq(assessmentScores.scoreScope, "section"),
-        eq(
-          assessmentScores.sectionId,
-          governanceSection.id,
-        ),
-      ),
-    )
-    .limit(1);
-
-  if (!sectionScore) {
-    [sectionScore] = await db
-      .insert(assessmentScores)
-      .values({
-        organizationId: geovaris.id,
-        assessmentId: demoAssessment.id,
-        sectionId: governanceSection.id,
-        scoreScope: "section",
-        rawScore: "4",
-        maximumScore: "4",
-        normalizedScore: "100",
-        weightedScore: "4",
-        scoringStatus: "calculated",
-        scoringNotes:
-          "Prototype Data Governance section score.",
-        calculatedAt: new Date(),
-      })
-      .returning();
-
-    console.log("Created section score: Data Governance = 100%");
+    console.log(
+      "Created demo response: GOV-001 = YES",
+    );
   } else {
     console.log(
-      "Section score already exists: Data Governance",
+      "Existing GOV-001 response preserved.",
     );
   }
 
   // ==================================================
-  // 15. Overall Assessment Score
+  // 10. Recalculate Scores
+  //
+  // Scoring logic belongs to the scoring service.
+  // seed.ts does not manually calculate scores.
   // ==================================================
 
-  let [overallScore] = await db
-    .select()
-    .from(assessmentScores)
-    .where(
-      and(
-        eq(
-          assessmentScores.assessmentId,
-          demoAssessment.id,
-        ),
-        eq(assessmentScores.scoreScope, "overall"),
-        isNull(assessmentScores.sectionId),
-      ),
-    )
-    .limit(1);
+  await recalculateAssessmentScores(
+    demoAssessment.id,
+  );
 
-  if (!overallScore) {
-    [overallScore] = await db
-      .insert(assessmentScores)
-      .values({
-        organizationId: geovaris.id,
-        assessmentId: demoAssessment.id,
-        sectionId: null,
-        scoreScope: "overall",
-        rawScore: "4",
-        maximumScore: "4",
-        normalizedScore: "100",
-        weightedScore: "4",
-        scoringStatus: "calculated",
-        scoringNotes:
-          "Prototype overall GDHF assessment score.",
-        calculatedAt: new Date(),
-      })
-      .returning();
+  console.log(
+    "Assessment scores recalculated.",
+  );
 
-    console.log("Created overall assessment score: 100%");
-  } else {
-    console.log("Overall assessment score already exists");
-  }
-  
   // ==================================================
   // Complete
   // ==================================================
 
   console.log("----------------------------------------");
-  console.log("GDHF end-to-end validation complete.");
-  console.log("----------------------------------------");
-  console.log("GeoVaris");
-  console.log("├── GDHF Configuration");
-  console.log("│   └── GOV-001");
-  console.log("│       └── YES = 4 points");
-  console.log("│");
-  console.log("└── GeoVaris Demo Client");
-  console.log("    └── GDHF-DEMO-001");
-  console.log("        └── GOV-001 Response: YES");
-  console.log("            └── Response Score: 100%");
-  console.log("                └── Section Score: 100%");
-  console.log("                    └── Overall Score: 100%");
+  console.log("GDHF expanded demo assessment ready.");
   console.log("----------------------------------------");
 
+  console.log("Sections: 4");
+  console.log("Questions: 12");
+  console.log("Seeded responses: 1");
+  console.log("Unanswered questions: 11");
+
+  console.log("----------------------------------------");
+
+  console.log("Data Governance");
+  console.log("  GOV-001");
+  console.log("  GOV-002");
+  console.log("  GOV-003");
+
+  console.log("Data Quality");
+  console.log("  DQ-001");
+  console.log("  DQ-002");
+  console.log("  DQ-003");
+
+  console.log("Analytics & Reporting");
+  console.log("  AN-001");
+  console.log("  AN-002");
+  console.log("  AN-003");
+
+  console.log("AI Readiness");
+  console.log("  AI-001");
+  console.log("  AI-002");
+  console.log("  AI-003");
+
+  console.log("----------------------------------------");
   console.log("Database seed complete.");
 }
 
