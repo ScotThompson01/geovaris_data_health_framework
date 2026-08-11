@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getAssessmentResultsByCode } from "@/db/repositories/assessment-repository";
-import { getDataHealthMaturity } from "@/domain/data-health-maturity";
-
 import {
   buildFindingStatement,
   getAssessmentFinding,
 } from "@/domain/assessment-findings";
+import { getAssessmentRecommendation } from "@/domain/assessment-recommendations";
+import { getDataHealthMaturity } from "@/domain/data-health-maturity";
+import { getAssessmentResultsByCode } from "@/db/repositories/assessment-repository";
 
 type AssessmentResultsPageProps = {
   params: Promise<{
@@ -432,7 +432,7 @@ export default async function AssessmentResultsPage({
           </div>
         </section>
 
-                {/* Assessment Findings */}
+        {/* Assessment Findings */}
 
         <section className="mb-8">
           <div className="mb-4">
@@ -445,124 +445,186 @@ export default async function AssessmentResultsPage({
             </h2>
 
             <p className="mt-2 text-sm text-slate-600">
-              Findings are generated from the scored assessment responses
-              using the GeoVaris assessment finding model.
+              Findings and recommendations are
+              generated from the scored assessment
+              responses using the GeoVaris assessment
+              methodology.
             </p>
           </div>
 
           <div className="space-y-4">
-            {responses.map((response) => {
-              const finding =
-                getAssessmentFinding(
-                  response.normalizedScore,
-                  response.isNotApplicable ??
-                    false,
+            {responses.map(
+              (response) => {
+                const finding =
+                  getAssessmentFinding(
+                    response.normalizedScore,
+                    response.isNotApplicable ??
+                      false,
+                  );
+
+                const findingStatement =
+                  buildFindingStatement(
+                    response.questionCode,
+                    response.questionText,
+                    response.normalizedScore,
+                    response.selectedOptionCode,
+                    response.isNotApplicable ??
+                      false,
+                  );
+
+                const recommendation =
+                  getAssessmentRecommendation(
+                    finding,
+                    response.questionCode,
+                    response.questionText,
+                  );
+
+                if (
+                  !finding ||
+                  !findingStatement
+                ) {
+                  return null;
+                }
+
+                return (
+                  <article
+                    key={
+                      response.questionId
+                    }
+                    className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+                  >
+                    {/* Finding Header */}
+
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-indigo-600">
+                          {
+                            response.questionCode
+                          }
+                        </p>
+
+                        <h3 className="mt-1 text-lg font-semibold text-slate-900">
+                          {
+                            response.questionText
+                          }
+                        </h3>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-sm text-slate-500">
+                          Finding
+                        </p>
+
+                        <p className="mt-1 font-semibold text-slate-900">
+                          {
+                            finding.label
+                          }
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Finding Detail */}
+
+                    <div className="mt-5 grid gap-4 md:grid-cols-3">
+                      <div>
+                        <p className="text-sm text-slate-500">
+                          Score
+                        </p>
+
+                        <p className="mt-1 font-semibold text-slate-900">
+                          {formatScore(
+                            response.normalizedScore,
+                          )}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-sm text-slate-500">
+                          Severity
+                        </p>
+
+                        <p className="mt-1 font-semibold capitalize text-slate-900">
+                          {
+                            finding.severity
+                          }
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-sm text-slate-500">
+                          Response
+                        </p>
+
+                        <p className="mt-1 font-semibold text-slate-900">
+                          {
+                            response.selectedOptionLabel ??
+                            "—"
+                          }
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Finding Statement */}
+
+                    <div className="mt-5 border-t border-slate-100 pt-4">
+                      <p className="text-sm font-medium text-slate-700">
+                        Finding Statement
+                      </p>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        {
+                          findingStatement
+                        }
+                      </p>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-500">
+                        {
+                          finding.description
+                        }
+                      </p>
+                    </div>
+
+                    {/* Recommendation */}
+
+                    {recommendation && (
+                      <div className="mt-5 rounded-lg border border-indigo-100 bg-indigo-50 p-5">
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-indigo-600">
+                              Recommendation
+                            </p>
+
+                            <h4 className="mt-1 font-semibold text-slate-900">
+                              {
+                                recommendation.title
+                              }
+                            </h4>
+                          </div>
+
+                          <div className="text-right">
+                            <p className="text-sm text-slate-500">
+                              Priority
+                            </p>
+
+                            <p className="mt-1 font-semibold capitalize text-slate-900">
+                              {
+                                recommendation.priority
+                              }
+                            </p>
+                          </div>
+                        </div>
+
+                        <p className="mt-3 text-sm leading-6 text-slate-700">
+                          {
+                            recommendation.recommendation
+                          }
+                        </p>
+                      </div>
+                    )}
+                  </article>
                 );
-
-             const findingStatement =
-              buildFindingStatement(
-                response.questionCode,
-                response.questionText,
-                response.normalizedScore,
-                response.selectedOptionCode,
-                response.isNotApplicable ??
-                   false,
-              );
-
-              if (!finding || !findingStatement) {
-                return null;
-              }
-
-              return (
-                <article
-                  key={response.questionId}
-                  className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-indigo-600">
-                        {
-                          response.questionCode
-                        }
-                      </p>
-
-                      <h3 className="mt-1 text-lg font-semibold text-slate-900">
-                        {
-                          response.questionText
-                        }
-                      </h3>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="text-sm text-slate-500">
-                        Finding
-                      </p>
-
-                      <p className="mt-1 font-semibold text-slate-900">
-                        {finding.label}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 grid gap-4 md:grid-cols-3">
-                    <div>
-                      <p className="text-sm text-slate-500">
-                        Score
-                      </p>
-
-                      <p className="mt-1 font-semibold text-slate-900">
-                        {formatScore(
-                          response.normalizedScore,
-                        )}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-slate-500">
-                        Severity
-                      </p>
-
-                      <p className="mt-1 font-semibold capitalize text-slate-900">
-                        {
-                          finding.severity
-                        }
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-slate-500">
-                        Response
-                      </p>
-
-                      <p className="mt-1 font-semibold text-slate-900">
-                        {
-                          response.selectedOptionLabel ??
-                          "—"
-                        }
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 border-t border-slate-100 pt-4">
-                    <p className="text-sm font-medium text-slate-700">
-                      Finding Statement
-                    </p>
-
-                    <p className="mt-2 text-sm text-slate-600">
-                      {
-                        findingStatement
-                      }
-                    </p>
-
-                    <p className="mt-2 text-sm text-slate-500">
-                      {
-                        finding.description
-                      }
-                    </p>
-                  </div>
-                </article>
-              );
-            })}
+              },
+            )}
           </div>
         </section>
 
