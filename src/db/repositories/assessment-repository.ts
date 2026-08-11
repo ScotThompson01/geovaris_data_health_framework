@@ -132,6 +132,9 @@ export async function getAssessmentRunnerByCode(
       questionText:
         templateQuestions.questionText,
 
+      isRequired:
+        templateQuestions.isRequired,
+
       guidanceText:
         templateQuestions.guidanceText,
 
@@ -484,11 +487,11 @@ export async function getAssessmentSummaries() {
       totalQuestions === 0
         ? 0
         : Math.round(
-            (
-              answeredQuestions /
-              totalQuestions
-            ) * 100,
-          );
+          (
+            answeredQuestions /
+            totalQuestions
+          ) * 100,
+        );
 
     summaries.push({
       assessmentId:
@@ -810,11 +813,11 @@ export async function getAssessmentResultsByCode(
     totalQuestions === 0
       ? 0
       : Math.round(
-          (
-            answeredQuestions /
-            totalQuestions
-          ) * 100,
-        );
+        (
+          answeredQuestions /
+          totalQuestions
+        ) * 100,
+      );
 
   return {
     assessment,
@@ -829,4 +832,287 @@ export async function getAssessmentResultsByCode(
       completionPercent,
     },
   };
+}
+
+// ==================================================
+// Assessment Creation Options
+// ==================================================
+
+export async function getAssessmentCreationOptions() {
+  const clientOptions = await db
+    .select({
+      id: clients.id,
+      organizationId:
+        clients.organizationId,
+      name: clients.name,
+      status: clients.status,
+    })
+    .from(clients)
+    .orderBy(
+      asc(clients.name),
+    );
+
+  const templateOptions = await db
+    .select({
+      frameworkId:
+        frameworks.id,
+
+      frameworkName:
+        frameworks.name,
+
+      methodologyId:
+        assessmentMethodologies.id,
+
+      methodologyName:
+        assessmentMethodologies.name,
+
+      templateId:
+        assessmentTemplates.id,
+
+      templateName:
+        assessmentTemplates.name,
+
+      templateVersionId:
+        assessmentTemplateVersions.id,
+
+      versionLabel:
+        assessmentTemplateVersions.versionLabel,
+
+      versionStatus:
+        assessmentTemplateVersions.status,
+    })
+    .from(
+      assessmentTemplateVersions,
+    )
+    .innerJoin(
+      assessmentTemplates,
+      eq(
+        assessmentTemplates.id,
+        assessmentTemplateVersions.templateId,
+      ),
+    )
+    .innerJoin(
+      assessmentMethodologies,
+      eq(
+        assessmentMethodologies.id,
+        assessmentTemplates.methodologyId,
+      ),
+    )
+    .innerJoin(
+      frameworks,
+      eq(
+        frameworks.id,
+        assessmentMethodologies.frameworkId,
+      ),
+    )
+    .orderBy(
+      asc(frameworks.name),
+      asc(
+        assessmentMethodologies.name,
+      ),
+      asc(
+        assessmentTemplates.name,
+      ),
+      asc(
+        assessmentTemplateVersions.versionNumber,
+      ),
+    );
+
+  return {
+    clients: clientOptions,
+    templates: templateOptions,
+  };
+}
+
+// ==================================================
+// Create Assessment
+// ==================================================
+
+export async function createAssessment(
+  input: {
+    clientId: string;
+    templateVersionId: string;
+    assessmentCode: string;
+    assessmentName: string;
+    description?: string | null;
+  },
+) {
+  // --------------------------------------------------
+  // Resolve Client
+  // --------------------------------------------------
+
+  const [client] = await db
+    .select({
+      id: clients.id,
+      organizationId:
+        clients.organizationId,
+    })
+    .from(clients)
+    .where(
+      eq(
+        clients.id,
+        input.clientId,
+      ),
+    )
+    .limit(1);
+
+  if (!client) {
+    throw new Error(
+      "Selected client was not found.",
+    );
+  }
+
+  // --------------------------------------------------
+  // Resolve Template / Methodology / Framework
+  // --------------------------------------------------
+
+  const [template] = await db
+    .select({
+      templateVersionId:
+        assessmentTemplateVersions.id,
+
+      templateId:
+        assessmentTemplates.id,
+
+      methodologyId:
+        assessmentMethodologies.id,
+
+      frameworkId:
+        frameworks.id,
+
+      organizationId:
+        assessmentTemplates.organizationId,
+    })
+    .from(
+      assessmentTemplateVersions,
+    )
+    .innerJoin(
+      assessmentTemplates,
+      eq(
+        assessmentTemplates.id,
+        assessmentTemplateVersions.templateId,
+      ),
+    )
+    .innerJoin(
+      assessmentMethodologies,
+      eq(
+        assessmentMethodologies.id,
+        assessmentTemplates.methodologyId,
+      ),
+    )
+    .innerJoin(
+      frameworks,
+      eq(
+        frameworks.id,
+        assessmentMethodologies.frameworkId,
+      ),
+    )
+    .where(
+      eq(
+        assessmentTemplateVersions.id,
+        input.templateVersionId,
+      ),
+    )
+    .limit(1);
+
+  if (!template) {
+    throw new Error(
+      "Selected assessment template version was not found.",
+    );
+  }
+
+  // --------------------------------------------------
+  // Validate Organization Boundary
+  // --------------------------------------------------
+
+  if (
+    client.organizationId !==
+    template.organizationId
+  ) {
+    throw new Error(
+      "Client and assessment template belong to different organizations.",
+    );
+  }
+
+  // --------------------------------------------------
+  // Prevent Duplicate Assessment Code
+  // --------------------------------------------------
+
+  const [existingAssessment] =
+    await db
+      .select({
+        id: assessments.id,
+      })
+      .from(assessments)
+      .where(
+        and(
+          eq(
+            assessments.organizationId,
+            client.organizationId,
+          ),
+          eq(
+            assessments.assessmentCode,
+            input.assessmentCode,
+          ),
+        ),
+      )
+      .limit(1);
+
+  if (existingAssessment) {
+    throw new Error(
+      `Assessment code ${input.assessmentCode} already exists.`,
+    );
+  }
+
+  // --------------------------------------------------
+  // Create Draft Assessment
+  // --------------------------------------------------
+
+  const [newAssessment] = await db
+    .insert(assessments)
+    .values({
+      organizationId:
+        client.organizationId,
+
+      clientId:
+        client.id,
+
+      frameworkId:
+        template.frameworkId,
+
+      methodologyId:
+        template.methodologyId,
+
+      templateId:
+        template.templateId,
+
+      templateVersionId:
+        template.templateVersionId,
+
+      assessmentCode:
+        input.assessmentCode,
+
+      name:
+        input.assessmentName,
+
+      description:
+        input.description ?? null,
+
+      status:
+        "draft",
+
+      updatedAt:
+        new Date(),
+    })
+    .returning({
+      id: assessments.id,
+      assessmentCode:
+        assessments.assessmentCode,
+      assessmentName:
+        assessments.name,
+      status:
+        assessments.status,
+    });
+
+  return newAssessment;
 }

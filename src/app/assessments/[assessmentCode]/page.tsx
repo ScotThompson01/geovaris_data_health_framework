@@ -5,6 +5,10 @@ import { completeAssessment } from "../completion-actions";
 
 import { getAssessmentRunnerByCode } from "@/db/repositories/assessment-repository";
 
+import {
+  validateAssessmentState,
+} from "@/domain/assessment-validation";
+
 type AssessmentPageProps = {
   params: Promise<{
     assessmentCode: string;
@@ -66,7 +70,8 @@ export default async function AssessmentPage({
   // Assessment Progress
   // --------------------------------------------------
 
-  const totalQuestions = responses.length;
+  const totalQuestions =
+    responses.length;
 
   const answeredQuestions =
     responses.filter(
@@ -74,27 +79,40 @@ export default async function AssessmentPage({
         question.responseId !== null,
     ).length;
 
+  const requiredQuestions =
+    responses.filter(
+      (question) =>
+        question.isRequired,
+    ).length;
+
+  const answeredRequiredQuestions =
+    responses.filter(
+      (question) =>
+        question.isRequired &&
+        question.responseId !== null,
+    ).length;
+
+  const validation =
+    validateAssessmentState({
+      totalQuestions,
+      answeredQuestions,
+      requiredQuestions,
+      answeredRequiredQuestions,
+      assessmentStatus:
+        assessment.assessmentStatus,
+    });
+
   const completionPercent =
-    totalQuestions === 0
-      ? 0
-      : Math.round(
-          (answeredQuestions /
-            totalQuestions) *
-            100,
-        );
+    validation.progressPercent;
 
   const remainingQuestions =
-    totalQuestions - answeredQuestions;
+    validation.unansweredRequiredQuestions;
 
   const isCompleted =
-    assessment.assessmentStatus ===
-    "completed";
+    validation.isComplete;
 
   const canComplete =
-    totalQuestions > 0 &&
-    answeredQuestions ===
-      totalQuestions &&
-    !isCompleted;
+    validation.canComplete;
 
   // --------------------------------------------------
   // Group Questions by Section
