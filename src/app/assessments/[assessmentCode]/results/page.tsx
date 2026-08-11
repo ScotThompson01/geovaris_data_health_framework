@@ -5,6 +5,11 @@ import {
   buildFindingStatement,
   getAssessmentFinding,
 } from "@/domain/assessment-findings";
+
+import {
+  getAssessmentPriority,
+} from "@/domain/assessment-priority";
+
 import { getAssessmentRecommendation } from "@/domain/assessment-recommendations";
 import { getDataHealthMaturity } from "@/domain/data-health-maturity";
 import { getAssessmentResultsByCode } from "@/db/repositories/assessment-repository";
@@ -99,6 +104,68 @@ export default async function AssessmentResultsPage({
   const overallMaturity =
     getDataHealthMaturity(
       overallScore?.normalizedScore,
+    );
+
+  // --------------------------------------------------
+  // Prioritized Action Plan
+  // --------------------------------------------------
+
+  const actionPlan = responses
+    .map((response) => {
+      const finding =
+        getAssessmentFinding(
+          response.normalizedScore,
+          response.isNotApplicable ?? false,
+        );
+
+      const recommendation =
+        getAssessmentRecommendation(
+          finding,
+          response.questionCode,
+          response.questionText,
+        );
+
+      if (
+        !finding ||
+        !recommendation ||
+        finding.label === "Strength"
+      ) {
+        return null;
+      }
+
+      const priority =
+        getAssessmentPriority(
+          recommendation.priority,
+        );
+
+      return {
+        questionId: response.questionId,
+        questionCode: response.questionCode,
+        questionText: response.questionText,
+        sectionName: response.sectionName,
+        finding: finding.label,
+        recommendationTitle:
+          recommendation.title,
+        recommendation:
+          recommendation.recommendation,
+        priority:
+          recommendation.priority,
+        priorityRank:
+          priority.rank,
+        actionHorizon:
+          priority.actionHorizon,
+      };
+    })
+    .filter(
+      (
+        item,
+      ): item is NonNullable<
+        typeof item
+      > => item !== null,
+    )
+    .sort(
+      (a, b) =>
+        a.priorityRank - b.priorityRank,
     );
 
   // --------------------------------------------------
@@ -390,14 +457,14 @@ export default async function AssessmentResultsPage({
 
                         {section.notApplicableQuestions >
                           0 && (
-                          <p className="mt-1 text-sm text-slate-500">
-                            {
-                              section.notApplicableQuestions
-                            }{" "}
-                            marked Not
-                            Applicable
-                          </p>
-                        )}
+                            <p className="mt-1 text-sm text-slate-500">
+                              {
+                                section.notApplicableQuestions
+                              }{" "}
+                              marked Not
+                              Applicable
+                            </p>
+                          )}
                       </div>
 
                       <div className="text-right">
@@ -432,6 +499,86 @@ export default async function AssessmentResultsPage({
           </div>
         </section>
 
+        {/* Prioritized Action Plan */}
+
+        <section className="mb-8">
+          <div className="mb-4">
+            <p className="text-sm font-medium text-indigo-600">
+              Recommended Actions
+            </p>
+
+            <h2 className="mt-1 text-2xl font-bold text-slate-900">
+              Prioritized Action Plan
+            </h2>
+
+            <p className="mt-2 text-sm text-slate-600">
+              Recommended actions are prioritized based on the
+              assessment findings and GeoVaris assessment methodology.
+            </p>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            {actionPlan.map((action, index) => (
+              <div
+                key={action.questionId}
+                className="border-b border-slate-100 p-6 last:border-b-0"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-6">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-indigo-600">
+                        #{index + 1}
+                      </span>
+
+                      <span className="text-sm text-slate-500">
+                        {action.questionCode}
+                      </span>
+
+                      <span className="text-sm text-slate-500">
+                        {action.sectionName}
+                      </span>
+                    </div>
+
+                    <h3 className="mt-2 text-lg font-semibold text-slate-900">
+                      {action.recommendationTitle}
+                    </h3>
+
+                    <p className="mt-2 text-sm text-slate-600">
+                      {action.questionText}
+                    </p>
+
+                    <p className="mt-3 text-sm leading-6 text-slate-700">
+                      {action.recommendation}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-8">
+                    <div className="text-right">
+                      <p className="text-sm text-slate-500">
+                        Priority
+                      </p>
+
+                      <p className="mt-1 font-semibold capitalize text-slate-900">
+                        {action.priority}
+                      </p>
+                    </div>
+
+                    <div className="min-w-24 text-right">
+                      <p className="text-sm text-slate-500">
+                        Action Horizon
+                      </p>
+
+                      <p className="mt-1 font-semibold text-slate-900">
+                        {action.actionHorizon}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Assessment Findings */}
 
         <section className="mb-8">
@@ -445,189 +592,185 @@ export default async function AssessmentResultsPage({
             </h2>
 
             <p className="mt-2 text-sm text-slate-600">
-              Findings and recommendations are
-              generated from the scored assessment
-              responses using the GeoVaris assessment
-              methodology.
+              Findings and recommendations are generated from the scored
+              assessment responses using the GeoVaris assessment methodology.
             </p>
           </div>
 
           <div className="space-y-4">
-            {responses.map(
-              (response) => {
-                const finding =
-                  getAssessmentFinding(
-                    response.normalizedScore,
-                    response.isNotApplicable ??
-                      false,
-                  );
+            {responses.map((response) => {
+              const finding =
+                getAssessmentFinding(
+                  response.normalizedScore,
+                  response.isNotApplicable ?? false,
+                );
 
-                const findingStatement =
-                  buildFindingStatement(
-                    response.questionCode,
-                    response.questionText,
-                    response.normalizedScore,
-                    response.selectedOptionCode,
-                    response.isNotApplicable ??
-                      false,
-                  );
+              const findingStatement =
+                buildFindingStatement(
+                  response.questionCode,
+                  response.questionText,
+                  response.normalizedScore,
+                  response.selectedOptionCode,
+                  response.isNotApplicable ?? false,
+                );
 
-                const recommendation =
-                  getAssessmentRecommendation(
-                    finding,
-                    response.questionCode,
-                    response.questionText,
-                  );
+              const recommendation =
+                getAssessmentRecommendation(
+                  finding,
+                  response.questionCode,
+                  response.questionText,
+                );
 
-                if (
-                  !finding ||
-                  !findingStatement
-                ) {
-                  return null;
-                }
+              const priorityResult =
+                recommendation
+                  ? getAssessmentPriority(
+                    recommendation.priority,
+                  )
+                  : null;
 
-                return (
-                  <article
-                    key={
-                      response.questionId
-                    }
-                    className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
-                  >
-                    {/* Finding Header */}
+              if (!finding || !findingStatement) {
+                return null;
+              }
 
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-indigo-600">
-                          {
-                            response.questionCode
-                          }
-                        </p>
+              return (
+                <article
+                  key={response.questionId}
+                  className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+                >
+                  {/* Finding Header */}
 
-                        <h3 className="mt-1 text-lg font-semibold text-slate-900">
-                          {
-                            response.questionText
-                          }
-                        </h3>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="text-sm text-slate-500">
-                          Finding
-                        </p>
-
-                        <p className="mt-1 font-semibold text-slate-900">
-                          {
-                            finding.label
-                          }
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Finding Detail */}
-
-                    <div className="mt-5 grid gap-4 md:grid-cols-3">
-                      <div>
-                        <p className="text-sm text-slate-500">
-                          Score
-                        </p>
-
-                        <p className="mt-1 font-semibold text-slate-900">
-                          {formatScore(
-                            response.normalizedScore,
-                          )}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-slate-500">
-                          Severity
-                        </p>
-
-                        <p className="mt-1 font-semibold capitalize text-slate-900">
-                          {
-                            finding.severity
-                          }
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-slate-500">
-                          Response
-                        </p>
-
-                        <p className="mt-1 font-semibold text-slate-900">
-                          {
-                            response.selectedOptionLabel ??
-                            "—"
-                          }
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Finding Statement */}
-
-                    <div className="mt-5 border-t border-slate-100 pt-4">
-                      <p className="text-sm font-medium text-slate-700">
-                        Finding Statement
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-indigo-600">
+                        {response.questionCode}
                       </p>
 
-                      <p className="mt-2 text-sm leading-6 text-slate-600">
-                        {
-                          findingStatement
-                        }
+                      <h3 className="mt-1 text-lg font-semibold text-slate-900">
+                        {response.questionText}
+                      </h3>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-sm text-slate-500">
+                        Finding
                       </p>
 
-                      <p className="mt-2 text-sm leading-6 text-slate-500">
-                        {
-                          finding.description
-                        }
+                      <p className="mt-1 font-semibold text-slate-900">
+                        {finding.label}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Finding Details */}
+
+                  <div className="mt-5 grid gap-4 md:grid-cols-3">
+                    <div>
+                      <p className="text-sm text-slate-500">
+                        Score
+                      </p>
+
+                      <p className="mt-1 font-semibold text-slate-900">
+                        {formatScore(
+                          response.normalizedScore,
+                        )}
                       </p>
                     </div>
 
-                    {/* Recommendation */}
+                    <div>
+                      <p className="text-sm text-slate-500">
+                        Severity
+                      </p>
 
-                    {recommendation && (
-                      <div className="mt-5 rounded-lg border border-indigo-100 bg-indigo-50 p-5">
-                        <div className="flex flex-wrap items-start justify-between gap-4">
-                          <div>
-                            <p className="text-sm font-medium text-indigo-600">
-                              Recommendation
-                            </p>
+                      <p className="mt-1 font-semibold capitalize text-slate-900">
+                        {finding.severity}
+                      </p>
+                    </div>
 
-                            <h4 className="mt-1 font-semibold text-slate-900">
-                              {
-                                recommendation.title
-                              }
-                            </h4>
-                          </div>
+                    <div>
+                      <p className="text-sm text-slate-500">
+                        Response
+                      </p>
 
+                      <p className="mt-1 font-semibold text-slate-900">
+                        {response.selectedOptionLabel ?? "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Finding Statement */}
+
+                  <div className="mt-5 border-t border-slate-100 pt-4">
+                    <p className="text-sm font-medium text-slate-700">
+                      Finding Statement
+                    </p>
+
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      {findingStatement}
+                    </p>
+
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                      {finding.description}
+                    </p>
+                  </div>
+
+                  {/* Recommendation */}
+
+                  {recommendation && priorityResult && (
+                    <div className="mt-5 rounded-lg border border-indigo-100 bg-indigo-50 p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-6">
+                        <div>
+                          <p className="text-sm font-medium text-indigo-600">
+                            Recommendation
+                          </p>
+
+                          <h4 className="mt-1 font-semibold text-slate-900">
+                            {recommendation.title}
+                          </h4>
+                        </div>
+
+                        <div className="flex gap-8">
                           <div className="text-right">
                             <p className="text-sm text-slate-500">
                               Priority
                             </p>
 
                             <p className="mt-1 font-semibold capitalize text-slate-900">
-                              {
-                                recommendation.priority
-                              }
+                              {recommendation.priority}
+                            </p>
+                          </div>
+
+                          <div className="text-right">
+                            <p className="text-sm text-slate-500">
+                              Action Horizon
+                            </p>
+
+                            <p className="mt-1 font-semibold text-slate-900">
+                              {priorityResult.actionHorizon}
                             </p>
                           </div>
                         </div>
+                      </div>
 
-                        <p className="mt-3 text-sm leading-6 text-slate-700">
-                          {
-                            recommendation.recommendation
-                          }
+                      <p className="mt-3 text-sm leading-6 text-slate-700">
+                        {recommendation.recommendation}
+                      </p>
+
+                      <div className="mt-4 border-t border-indigo-100 pt-4">
+                        <p className="text-sm font-medium text-slate-700">
+                          Action Planning Guidance
+                        </p>
+
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                          {priorityResult.description}
                         </p>
                       </div>
-                    )}
-                  </article>
-                );
-              },
-            )}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
           </div>
         </section>
-
         {/* Completion Summary */}
 
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
