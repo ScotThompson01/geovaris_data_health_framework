@@ -47,6 +47,15 @@ export default async function AssessmentsPage() {
             Assessments
           </h1>
 
+          <div className="mb-6 flex justify-end">
+            <Link
+              href="/assessments/new"
+              className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              + New Assessment
+            </Link>
+          </div>
+
           <p className="mt-2 text-slate-600">
             View assessment progress, scores, and
             current status.
