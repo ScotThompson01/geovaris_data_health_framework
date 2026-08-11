@@ -14,6 +14,10 @@ import { getAssessmentRecommendation } from "@/domain/assessment-recommendations
 import { getDataHealthMaturity } from "@/domain/data-health-maturity";
 import { getAssessmentResultsByCode } from "@/db/repositories/assessment-repository";
 
+import {
+  buildExecutiveAssessmentSummary,
+} from "@/domain/assessment-executive-summary";
+
 type AssessmentResultsPageProps = {
   params: Promise<{
     assessmentCode: string;
@@ -167,7 +171,98 @@ export default async function AssessmentResultsPage({
       (a, b) =>
         a.priorityRank - b.priorityRank,
     );
+  // --------------------------------------------------
+  // Executive Summary
+  // --------------------------------------------------
 
+  const strengths = responses
+    .map((response) => {
+      const finding =
+        getAssessmentFinding(
+          response.normalizedScore,
+          response.isNotApplicable ?? false,
+        );
+
+      if (
+        !finding ||
+        finding.label !== "Strength"
+      ) {
+        return null;
+      }
+
+      return response.questionText;
+    })
+    .filter(
+      (item): item is string =>
+        item !== null,
+    );
+
+  const improvementAreas = responses
+    .map((response) => {
+      const finding =
+        getAssessmentFinding(
+          response.normalizedScore,
+          response.isNotApplicable ?? false,
+        );
+
+      if (
+        !finding ||
+        finding.label === "Strength" ||
+        finding.label === "Excluded"
+      ) {
+        return null;
+      }
+
+      return response.questionText;
+    })
+    .filter(
+      (item): item is string =>
+        item !== null,
+    );
+
+  const criticalGaps = responses
+    .map((response) => {
+      const finding =
+        getAssessmentFinding(
+          response.normalizedScore,
+          response.isNotApplicable ?? false,
+        );
+
+      if (
+        !finding ||
+        finding.label !== "Critical Gap"
+      ) {
+        return null;
+      }
+
+      return response.questionText;
+    })
+    .filter(
+      (item): item is string =>
+        item !== null,
+    );
+
+  const executiveSummary =
+    buildExecutiveAssessmentSummary({
+      overallScore:
+        overallScore?.normalizedScore ===
+          null ||
+          overallScore?.normalizedScore ===
+          undefined
+          ? null
+          : Number(
+            overallScore.normalizedScore,
+          ),
+
+      maturityLevel:
+        overallMaturity
+          ? `Level ${overallMaturity.levelNumber} — ${overallMaturity.level}`
+          : "Maturity not available",
+
+      strengths,
+      improvementAreas,
+      criticalGaps,
+    });
   // --------------------------------------------------
   // Build Section Summary
   // --------------------------------------------------
@@ -400,6 +495,84 @@ export default async function AssessmentResultsPage({
                 width: `${progress.completionPercent}%`,
               }}
             />
+          </div>
+        </section>
+
+        {/* Executive Summary */}
+
+        <section className="mb-8 rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="mb-5">
+            <p className="text-sm font-medium text-indigo-600">
+              Executive Interpretation
+            </p>
+
+            <h2 className="mt-1 text-2xl font-bold text-slate-900">
+              Executive Summary
+            </h2>
+          </div>
+
+          <div className="space-y-5">
+            <div>
+              <p className="text-sm font-medium text-slate-500">
+                Assessment Position
+              </p>
+
+              <p className="mt-2 text-lg font-semibold text-slate-900">
+                {executiveSummary.headline}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-slate-500">
+                Interpretation
+              </p>
+
+              <p className="mt-2 leading-7 text-slate-700">
+                {executiveSummary.summary}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-slate-500">
+                Recommended Focus
+              </p>
+
+              <p className="mt-2 leading-7 text-slate-700">
+                {executiveSummary.recommendedFocus}
+              </p>
+            </div>
+
+            <div className="grid gap-6 border-t border-slate-100 pt-5 md:grid-cols-3">
+              <div>
+                <p className="text-sm text-slate-500">
+                  Strengths
+                </p>
+
+                <p className="mt-1 text-2xl font-bold text-slate-900">
+                  {strengths.length}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-500">
+                  Improvement Areas
+                </p>
+
+                <p className="mt-1 text-2xl font-bold text-slate-900">
+                  {improvementAreas.length}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-500">
+                  Critical Gaps
+                </p>
+
+                <p className="mt-1 text-2xl font-bold text-slate-900">
+                  {criticalGaps.length}
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
