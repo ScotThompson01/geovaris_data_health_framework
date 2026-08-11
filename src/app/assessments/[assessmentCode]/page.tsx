@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { saveAssessmentResponse } from "../actions";
+import { completeAssessment } from "../completion-actions";
 
 import { getAssessmentRunnerByCode } from "@/db/repositories/assessment-repository";
 
@@ -28,13 +29,26 @@ function formatScore(
   })}%`;
 }
 
+function formatStatus(status: string) {
+  return status
+    .split("_")
+    .map(
+      (word) =>
+        word.charAt(0).toUpperCase() +
+        word.slice(1),
+    )
+    .join(" ");
+}
+
 export default async function AssessmentPage({
   params,
 }: AssessmentPageProps) {
   const { assessmentCode } = await params;
 
   const data =
-    await getAssessmentRunnerByCode(assessmentCode);
+    await getAssessmentRunnerByCode(
+      assessmentCode,
+    );
 
   if (!data) {
     notFound();
@@ -54,39 +68,64 @@ export default async function AssessmentPage({
 
   const totalQuestions = responses.length;
 
-  const answeredQuestions = responses.filter(
-    (question) => question.responseId !== null,
-  ).length;
+  const answeredQuestions =
+    responses.filter(
+      (question) =>
+        question.responseId !== null,
+    ).length;
 
   const completionPercent =
     totalQuestions === 0
       ? 0
       : Math.round(
-          (answeredQuestions / totalQuestions) * 100,
+          (answeredQuestions /
+            totalQuestions) *
+            100,
         );
 
-  const groupedSections = responses.reduce<
-    Record<
-      string,
-      {
-        sectionName: string;
-        questions: typeof responses;
+  const remainingQuestions =
+    totalQuestions - answeredQuestions;
+
+  const isCompleted =
+    assessment.assessmentStatus ===
+    "completed";
+
+  const canComplete =
+    totalQuestions > 0 &&
+    answeredQuestions ===
+      totalQuestions &&
+    !isCompleted;
+
+  // --------------------------------------------------
+  // Group Questions by Section
+  // --------------------------------------------------
+
+  const groupedSections =
+    responses.reduce<
+      Record<
+        string,
+        {
+          sectionName: string;
+          questions: typeof responses;
+        }
+      >
+    >((acc, response) => {
+      const key = response.sectionId;
+
+      if (!acc[key]) {
+        acc[key] = {
+          sectionName:
+            response.sectionName,
+          questions: [],
+        };
       }
-    >
-  >((acc, response) => {
-    const key = response.sectionId;
 
-    if (!acc[key]) {
-      acc[key] = {
-        sectionName: response.sectionName,
-        questions: [],
-      };
-    }
+      acc[key].questions.push(
+        response,
+      );
 
-    acc[key].questions.push(response);
-
-    return acc;
-  }, {});
+      return acc;
+    }, {});
 
   return (
     <main className="min-h-screen bg-slate-50 p-8">
@@ -99,11 +138,15 @@ export default async function AssessmentPage({
           </p>
 
           <h1 className="mt-2 text-3xl font-bold text-slate-900">
-            {assessment.assessmentName}
+            {
+              assessment.assessmentName
+            }
           </h1>
 
           <p className="mt-2 text-slate-600">
-            {assessment.assessmentCode}
+            {
+              assessment.assessmentCode
+            }
           </p>
 
           <div className="mt-4 grid gap-2 text-sm text-slate-600 md:grid-cols-2">
@@ -111,45 +154,58 @@ export default async function AssessmentPage({
               <span className="font-medium text-slate-900">
                 Client:
               </span>{" "}
-              {assessment.clientName}
+              {
+                assessment.clientName
+              }
             </p>
 
             <p>
               <span className="font-medium text-slate-900">
                 Status:
               </span>{" "}
-              {assessment.assessmentStatus}
+              {formatStatus(
+                assessment.assessmentStatus,
+              )}
             </p>
 
             <p>
               <span className="font-medium text-slate-900">
                 Framework:
               </span>{" "}
-              {assessment.frameworkName}
+              {
+                assessment.frameworkName
+              }
             </p>
 
             <p>
               <span className="font-medium text-slate-900">
                 Methodology:
               </span>{" "}
-              {assessment.methodologyName}
+              {
+                assessment.methodologyName
+              }
             </p>
 
             <p>
               <span className="font-medium text-slate-900">
                 Template:
               </span>{" "}
-              {assessment.templateName}
+              {
+                assessment.templateName
+              }
             </p>
 
             <p>
               <span className="font-medium text-slate-900">
                 Version:
               </span>{" "}
-              {assessment.versionLabel}
+              {
+                assessment.versionLabel
+              }
             </p>
           </div>
         </div>
+
         {/* Assessment Progress */}
 
         <div className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -160,16 +216,23 @@ export default async function AssessmentPage({
               </p>
 
               <p className="mt-2 text-2xl font-bold text-slate-900">
-                {answeredQuestions} of {totalQuestions} answered
+                {answeredQuestions} of{" "}
+                {totalQuestions} answered
               </p>
 
               <p className="mt-1 text-sm text-slate-500">
-                {completionPercent}% complete
+                {
+                  completionPercent
+                }
+                % complete
               </p>
             </div>
 
             <p className="text-3xl font-bold text-slate-900">
-              {completionPercent}%
+              {
+                completionPercent
+              }
+              %
             </p>
           </div>
 
@@ -181,8 +244,41 @@ export default async function AssessmentPage({
               }}
             />
           </div>
-        </div>
 
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+            <p className="text-sm text-slate-500">
+              {isCompleted
+                ? "Assessment completed."
+                : canComplete
+                  ? "All required questions are answered."
+                  : `${remainingQuestions} required question(s) remain unanswered.`}
+            </p>
+
+            {!isCompleted && (
+              <form
+                action={
+                  completeAssessment
+                }
+              >
+                <input
+                  type="hidden"
+                  name="assessmentCode"
+                  value={
+                    assessment.assessmentCode
+                  }
+                />
+
+                <button
+                  type="submit"
+                  disabled={!canComplete}
+                  className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+                >
+                  Complete Assessment
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
 
         {/* Overall Score */}
 
@@ -201,19 +297,29 @@ export default async function AssessmentPage({
         {/* Assessment Sections */}
 
         <div className="space-y-8">
-          {Object.entries(groupedSections).map(
-            ([sectionId, section]) => {
+          {Object.entries(
+            groupedSections,
+          ).map(
+            ([
+              sectionId,
+              section,
+            ]) => {
               const sectionScore =
                 sectionScores.find(
                   (score) =>
-                    score.sectionId === sectionId,
+                    score.sectionId ===
+                    sectionId,
                 );
 
               return (
-                <section key={sectionId}>
+                <section
+                  key={sectionId}
+                >
                   <div className="mb-4 flex items-end justify-between gap-4">
                     <h2 className="text-2xl font-semibold text-slate-900">
-                      {section.sectionName}
+                      {
+                        section.sectionName
+                      }
                     </h2>
 
                     <div className="text-right">
@@ -236,14 +342,18 @@ export default async function AssessmentPage({
                       (question) => {
                         const questionOptions =
                           availableOptions.filter(
-                            (option) =>
+                            (
+                              option,
+                            ) =>
                               option.questionId ===
                               question.questionId,
                           );
 
                         return (
                           <div
-                            key={question.questionId}
+                            key={
+                              question.questionId
+                            }
                             className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
                           >
                             <div className="flex items-start justify-between gap-6">
@@ -306,14 +416,20 @@ export default async function AssessmentPage({
                                 }
                               />
 
-                              <fieldset>
+                              <fieldset
+                                disabled={
+                                  isCompleted
+                                }
+                              >
                                 <legend className="text-sm font-medium text-slate-700">
                                   Select Response
                                 </legend>
 
                                 <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                   {questionOptions.map(
-                                    (option) => (
+                                    (
+                                      option,
+                                    ) => (
                                       <label
                                         key={
                                           option.optionId
@@ -343,28 +459,28 @@ export default async function AssessmentPage({
                                     ),
                                   )}
                                 </div>
+
+                                <div className="mt-5">
+                                  <label
+                                    htmlFor={`comment-${question.questionId}`}
+                                    className="text-sm font-medium text-slate-700"
+                                  >
+                                    Comment
+                                  </label>
+
+                                  <textarea
+                                    id={`comment-${question.questionId}`}
+                                    name="respondentComment"
+                                    defaultValue={
+                                      question.respondentComment ??
+                                      ""
+                                    }
+                                    rows={3}
+                                    className="mt-2 w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900 disabled:bg-slate-100"
+                                    placeholder="Add supporting context or notes..."
+                                  />
+                                </div>
                               </fieldset>
-
-                              <div className="mt-5">
-                                <label
-                                  htmlFor={`comment-${question.questionId}`}
-                                  className="text-sm font-medium text-slate-700"
-                                >
-                                  Comment
-                                </label>
-
-                                <textarea
-                                  id={`comment-${question.questionId}`}
-                                  name="respondentComment"
-                                  defaultValue={
-                                    question.respondentComment ??
-                                    ""
-                                  }
-                                  rows={3}
-                                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900"
-                                  placeholder="Add supporting context or notes..."
-                                />
-                              </div>
 
                               <div className="mt-5 flex items-center justify-between gap-4">
                                 <div className="text-sm text-slate-500">
@@ -373,12 +489,14 @@ export default async function AssessmentPage({
                                     : "Not answered"}
                                 </div>
 
-                                <button
-                                  type="submit"
-                                  className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
-                                >
-                                  Save Response
-                                </button>
+                                {!isCompleted && (
+                                  <button
+                                    type="submit"
+                                    className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+                                  >
+                                    Save Response
+                                  </button>
+                                )}
                               </div>
                             </form>
                           </div>
