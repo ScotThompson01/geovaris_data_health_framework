@@ -112,6 +112,8 @@ export async function getAssessmentRunnerByCode(
         templateQuestionOptions.optionLabel,
       selectedOptionCode:
         templateQuestionOptions.optionCode,
+      selectedOptionCode:
+        templateQuestionOptions.optionCode,
       selectedOptionScore:
         templateQuestionOptions.scoreValue,
 
