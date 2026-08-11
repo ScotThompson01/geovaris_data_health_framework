@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getAssessmentResultsByCode } from "@/db/repositories/assessment-repository";
+import { getDataHealthMaturity } from "@/domain/data-health-maturity";
 
 type AssessmentResultsPageProps = {
   params: Promise<{
@@ -85,6 +86,19 @@ export default async function AssessmentResultsPage({
     overallScore,
     progress,
   } = data;
+
+  // --------------------------------------------------
+  // Overall Maturity
+  // --------------------------------------------------
+
+  const overallMaturity =
+    getDataHealthMaturity(
+      overallScore?.normalizedScore,
+    );
+
+  // --------------------------------------------------
+  // Build Section Summary
+  // --------------------------------------------------
 
   const sections = responses.reduce<
     Record<
@@ -263,6 +277,27 @@ export default async function AssessmentResultsPage({
                   overallScore?.normalizedScore,
                 )}
               </p>
+
+              {overallMaturity && (
+                <div className="mt-4">
+                  <p className="text-lg font-semibold text-indigo-700">
+                    Level{" "}
+                    {
+                      overallMaturity.levelNumber
+                    }{" "}
+                    —{" "}
+                    {
+                      overallMaturity.level
+                    }
+                  </p>
+
+                  <p className="mt-2 max-w-2xl text-sm text-slate-600">
+                    {
+                      overallMaturity.description
+                    }
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="text-right">
@@ -319,6 +354,11 @@ export default async function AssessmentResultsPage({
                       section.sectionId,
                   );
 
+                const sectionMaturity =
+                  getDataHealthMaturity(
+                    score?.normalizedScore,
+                  );
+
                 return (
                   <div
                     key={section.sectionId}
@@ -365,6 +405,19 @@ export default async function AssessmentResultsPage({
                             score?.normalizedScore,
                           )}
                         </p>
+
+                        {sectionMaturity && (
+                          <p className="mt-2 text-sm font-medium text-indigo-700">
+                            Level{" "}
+                            {
+                              sectionMaturity.levelNumber
+                            }{" "}
+                            —{" "}
+                            {
+                              sectionMaturity.level
+                            }
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -434,9 +487,8 @@ export default async function AssessmentResultsPage({
 
           {!isCompleted && (
             <div className="mt-6 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
-              This assessment has not
-              been completed. Results
-              shown here are preliminary.
+              This assessment has not been completed.
+              Results shown here are preliminary.
             </div>
           )}
         </section>
