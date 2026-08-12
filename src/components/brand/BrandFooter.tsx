@@ -24,7 +24,7 @@ export function BrandFooter({
           className={
             isReport
               ? "h-auto w-[260px]"
-              : "h-auto w-[105px]"
+              : "h-auto w-[300px]"
           }
         />
 

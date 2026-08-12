@@ -20,24 +20,24 @@ export function BrandHeader({
       }
     >
       <GeoVarisLogo
-        width={isReport ? 420 : 210}
-        height={isReport ? 145 : 72}
+        width={isReport ? 420 : 600}
+        height={isReport ? 145 : 200}
         priority
         className={
           isReport
             ? "h-auto w-[340px]"
-            : "h-auto w-[170px]"
+            : "h-auto w-[600px]"
         }
       />
 
       <GdhfLogo
-        width={isReport ? 380 : 220}
-        height={isReport ? 125 : 72}
+        width={isReport ? 380 : 620}
+        height={isReport ? 125 : 200}
         priority
         className={
           isReport
             ? "h-auto w-[300px]"
-            : "h-auto w-[180px]"
+            : "h-auto w-[500px]"
         }
       />
     </div>
