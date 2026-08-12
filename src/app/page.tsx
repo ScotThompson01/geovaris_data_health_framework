@@ -1,65 +1,175 @@
-import Image from "next/image";
+import Link from "next/link";
 
-export default function Home() {
+import { GeoVarisLogo } from "@/components/brand/GeoVarisLogo";
+import { GdhfLogo } from "@/components/brand/GdhfLogo";
+
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <main
+      className="relative min-h-screen overflow-hidden bg-slate-950 bg-cover bg-center bg-no-repeat text-white"
+      style={{
+        backgroundImage:
+          "url('/brand/gdhf/gdhf-usa-background.png')",
+      }}
+    >
+      {/* Background overlays */}
+
+      <div className="absolute inset-0 bg-slate-950/35" />
+
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/55 to-brand-purple/10" />
+
+      {/* Page content */}
+
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-6">
+        {/* Header */}
+
+        <header className="grid grid-cols-2 items-start gap-8 py-8">
+          {/* GeoVaris Logo */}
+
+          <div className="flex items-start justify-start pt-8">
+            <GeoVarisLogo
+              width={1560}
+              height={540}
+              priority
+              className="h-auto w-[900px] max-w-none"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          </div>
+
+          {/* GDHF Logo */}
+
+          <div className="flex items-start justify-end pt-8">
+            <div className="rounded-xl bg-white/95 px-5 py-3 shadow-xl">
+              <GdhfLogo
+                width={380}
+                height={125}
+                priority
+                className="h-auto w-[310px]"
+              />
+            </div>
+          </div>
+        </header>
+
+        {/* Main content */}
+
+        <section className="grid flex-1 items-center gap-12 py-10 lg:grid-cols-[1.05fr_0.95fr]">
+          {/* Hero */}
+
+          <div className="max-w-2xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-purple-300">
+              GeoVaris Data Health Framework™
+            </p>
+
+            <h1 className="mt-5 text-5xl font-bold leading-tight md:text-6xl">
+              Measure. Govern.
+              <br />
+              Improve.{" "}
+              <span className="text-blue-400">
+                Trust.
+              </span>
+            </h1>
+
+            <p className="mt-6 max-w-xl text-lg leading-8 text-slate-200">
+              A structured assessment platform for evaluating
+              data governance, data quality, analytics readiness,
+              and AI readiness — and turning results into
+              prioritized, actionable improvement plans.
+            </p>
+
+            <div className="mt-10 flex flex-wrap gap-4">
+              <Link
+                href="/assessments"
+                className="rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 px-7 py-3.5 text-base font-semibold text-white shadow-lg transition hover:scale-[1.02]"
+              >
+                Open Assessments
+              </Link>
+
+              <Link
+                href="/assessments/new"
+                className="rounded-xl border border-purple-400 bg-slate-950/60 px-7 py-3.5 text-base font-semibold text-white backdrop-blur transition hover:bg-purple-950/70"
+              >
+                Create New Assessment
+              </Link>
+            </div>
+
+            <p className="mt-8 text-lg font-semibold">
+              <span className="text-purple-400">
+                Clean data.
+              </span>{" "}
+              <span className="text-blue-400">
+                Confident results.
+              </span>
+            </p>
+          </div>
+
+          {/* Capabilities */}
+
+          <div className="rounded-3xl border border-purple-300/30 bg-slate-950/70 p-8 shadow-2xl backdrop-blur-md">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-purple-300">
+              Assessment Capabilities
+            </p>
+
+            <div className="mt-6 grid gap-4">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <h2 className="text-lg font-semibold text-purple-300">
+                  Data Governance
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  Evaluate ownership, stewardship, policies,
+                  and accountability.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <h2 className="text-lg font-semibold text-blue-300">
+                  Data Quality
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  Assess controls, issue management, standards,
+                  and reliability.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <h2 className="text-lg font-semibold text-purple-300">
+                  Analytics &amp; Reporting
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  Measure trusted reporting, definitions,
+                  and decision readiness.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <h2 className="text-lg font-semibold text-blue-300">
+                  AI Readiness
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  Evaluate whether governed, trusted data can
+                  support AI use cases.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+
+        <footer className="border-t border-white/20 py-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-slate-300">
+            <p>GeoVaris</p>
+
+            <p>© 2026 GeoVaris</p>
+
+            <p className="font-medium text-purple-300">
+              GeoVaris Data Health Framework™
+            </p>
+          </div>
+        </footer>
+      </div>
+    </main>
   );
 }
