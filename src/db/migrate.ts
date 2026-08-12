@@ -3,22 +3,32 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 
-const migrationUrl =
-  process.env.DATABASE_URL_UNPOOLED ??
-  process.env.DATABASE_URL;
+function getMigrationUrl(): string {
+  const migrationUrl =
+    process.env.DATABASE_URL_UNPOOLED ??
+    process.env.DATABASE_URL;
 
-if (!migrationUrl) {
-  throw new Error(
-    "DATABASE_URL_UNPOOLED or DATABASE_URL is not configured.",
-  );
+  if (!migrationUrl) {
+    throw new Error(
+      "DATABASE_URL_UNPOOLED or DATABASE_URL is not configured.",
+    );
+  }
+
+  return migrationUrl;
 }
 
 async function runMigrations() {
   console.log("Starting database migrations...");
 
-  const migrationClient = postgres(migrationUrl, {
-    max: 1,
-  });
+  const migrationUrl =
+    getMigrationUrl();
+
+  const migrationClient = postgres(
+    migrationUrl,
+    {
+      max: 1,
+    },
+  );
 
   const db = drizzle(migrationClient);
 
