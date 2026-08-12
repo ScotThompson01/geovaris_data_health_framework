@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
-
+import Link from "next/link";
 import { saveAssessmentResponse } from "../actions";
 import { completeAssessment } from "../completion-actions";
+
+import { AppShell } from "@/components/brand/AppShell";
 
 import { getAssessmentRunnerByCode } from "@/db/repositories/assessment-repository";
 
@@ -145,13 +147,41 @@ export default async function AssessmentPage({
       return acc;
     }, {});
 
+
   return (
-    <main className="min-h-screen bg-slate-50 p-8">
-      <div className="mx-auto max-w-6xl">
+    <AppShell>
+      <div className="mx-auto w-full max-w-6xl px-6 py-10">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <Link
+            href="/assessments"
+            className="text-sm font-medium text-brand-purple hover:text-brand-purple-dark"
+          >
+            ← Back to Assessments
+          </Link>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/assessments/${assessment.assessmentCode}/results`}
+              className="rounded-lg border border-brand-purple px-4 py-2 text-sm font-medium text-brand-purple hover:bg-brand-blue-light"
+            >
+              View Results
+            </Link>
+
+            {isCompleted && (
+              <Link
+                href={`/assessments/${assessment.assessmentCode}/scorecard`}
+                className="rounded-lg bg-brand-purple px-4 py-2 text-sm font-medium text-white hover:bg-brand-purple-dark"
+              >
+                Executive Scorecard
+              </Link>
+            )}
+          </div>
+        </div>
+
         {/* Assessment Header */}
 
         <div className="mb-8">
-          <p className="text-sm font-medium text-indigo-600">
+          <p className="text-sm font-medium text-brand-purple">
             GeoVaris Assessment Platform
           </p>
 
@@ -256,7 +286,7 @@ export default async function AssessmentPage({
 
           <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200">
             <div
-              className="h-full rounded-full bg-indigo-600 transition-all"
+              className="h-full rounded-full bg-brand-purple transition-all"
               style={{
                 width: `${completionPercent}%`,
               }}
@@ -289,7 +319,7 @@ export default async function AssessmentPage({
                 <button
                   type="submit"
                   disabled={!canComplete}
-                  className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+                  className="rounded-lg bg-brand-purple px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-purple-dark disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
                 >
                   Complete Assessment
                 </button>
@@ -376,7 +406,7 @@ export default async function AssessmentPage({
                           >
                             <div className="flex items-start justify-between gap-6">
                               <div>
-                                <p className="text-sm font-medium text-indigo-600">
+                                <p className="text-sm font-medium text-brand-purple">
                                   {
                                     question.questionCode
                                   }
@@ -510,7 +540,7 @@ export default async function AssessmentPage({
                                 {!isCompleted && (
                                   <button
                                     type="submit"
-                                    className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+                                    className="rounded-lg bg-brand-purple px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-purple-dark"
                                   >
                                     Save Response
                                   </button>
@@ -527,7 +557,7 @@ export default async function AssessmentPage({
             },
           )}
         </div>
-      </div>
-    </main>
+      </div >
+    </AppShell >
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-
+import { AppShell } from "@/components/brand/AppShell";
 import {
   buildFindingStatement,
   getAssessmentFinding,
@@ -322,30 +322,39 @@ export default async function AssessmentResultsPage({
     "completed";
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
-      <div className="mx-auto max-w-6xl">
+    <AppShell>
+      <div className="mx-auto w-full max-w-6xl px-6 py-10">
         {/* Navigation */}
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <Link
             href="/assessments"
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+            className="text-sm font-medium text-brand-purple hover:text-brand-purple-dark"
           >
             ← Back to Assessments
           </Link>
 
-          <Link
-            href={`/assessments/${assessment.assessmentCode}`}
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
-          >
-            View Assessment
-          </Link>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link
+              href={`/assessments/${assessment.assessmentCode}`}
+              className="text-sm font-medium text-brand-purple hover:text-brand-purple-dark"
+            >
+              View Assessment
+            </Link>
+
+            <Link
+              href={`/assessments/${assessment.assessmentCode}/scorecard`}
+              className="rounded-lg bg-brand-purple px-4 py-2 text-sm font-medium text-white hover:bg-brand-purple-dark"
+            >
+              Executive Scorecard
+            </Link>
+          </div>
         </div>
 
         {/* Header */}
 
         <header className="mb-8">
-          <p className="text-sm font-medium text-indigo-600">
+          <p className="text-sm font-medium text-brand-purple">
             GeoVaris Assessment Platform
           </p>
 
@@ -447,7 +456,7 @@ export default async function AssessmentResultsPage({
 
               {overallMaturity && (
                 <div className="mt-4">
-                  <p className="text-lg font-semibold text-indigo-700">
+                  <p className="text-lg font-semibold text-brand-purple-dark">
                     Level{" "}
                     {
                       overallMaturity.levelNumber
@@ -490,7 +499,7 @@ export default async function AssessmentResultsPage({
 
           <div className="mt-6 h-3 overflow-hidden rounded-full bg-slate-200">
             <div
-              className="h-full rounded-full bg-indigo-600"
+              className="h-full rounded-full bg-brand-purple"
               style={{
                 width: `${progress.completionPercent}%`,
               }}
@@ -502,7 +511,7 @@ export default async function AssessmentResultsPage({
 
         <section className="mb-8 rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
           <div className="mb-5">
-            <p className="text-sm font-medium text-indigo-600">
+            <p className="text-sm font-medium text-brand-purple">
               Executive Interpretation
             </p>
 
@@ -580,7 +589,7 @@ export default async function AssessmentResultsPage({
 
         <section className="mb-8">
           <div className="mb-4">
-            <p className="text-sm font-medium text-indigo-600">
+            <p className="text-sm font-medium text-brand-purple">
               Assessment Breakdown
             </p>
 
@@ -652,7 +661,7 @@ export default async function AssessmentResultsPage({
                         </p>
 
                         {sectionMaturity && (
-                          <p className="mt-2 text-sm font-medium text-indigo-700">
+                          <p className="mt-2 text-sm font-medium text-brand-purple-dark">
                             Level{" "}
                             {
                               sectionMaturity.levelNumber
@@ -676,7 +685,7 @@ export default async function AssessmentResultsPage({
 
         <section className="mb-8">
           <div className="mb-4">
-            <p className="text-sm font-medium text-indigo-600">
+            <p className="text-sm font-medium text-brand-purple">
               Recommended Actions
             </p>
 
@@ -699,7 +708,7 @@ export default async function AssessmentResultsPage({
                 <div className="flex flex-wrap items-start justify-between gap-6">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-indigo-600">
+                      <span className="text-sm font-semibold text-brand-purple">
                         #{index + 1}
                       </span>
 
@@ -756,7 +765,7 @@ export default async function AssessmentResultsPage({
 
         <section className="mb-8">
           <div className="mb-4">
-            <p className="text-sm font-medium text-indigo-600">
+            <p className="text-sm font-medium text-brand-purple">
               Assessment Interpretation
             </p>
 
@@ -814,7 +823,7 @@ export default async function AssessmentResultsPage({
 
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <p className="text-sm font-medium text-indigo-600">
+                      <p className="text-sm font-medium text-brand-purple">
                         {response.questionCode}
                       </p>
 
@@ -889,10 +898,10 @@ export default async function AssessmentResultsPage({
                   {/* Recommendation */}
 
                   {recommendation && priorityResult && (
-                    <div className="mt-5 rounded-lg border border-indigo-100 bg-indigo-50 p-5">
+                    <div className="mt-5 rounded-lg border border-brand-border bg-brand-blue-light p-5">
                       <div className="flex flex-wrap items-start justify-between gap-6">
                         <div>
-                          <p className="text-sm font-medium text-indigo-600">
+                          <p className="text-sm font-medium text-brand-purple">
                             Recommendation
                           </p>
 
@@ -928,7 +937,7 @@ export default async function AssessmentResultsPage({
                         {recommendation.recommendation}
                       </p>
 
-                      <div className="mt-4 border-t border-indigo-100 pt-4">
+                      <div className="mt-4 border-t border-brand-border pt-4">
                         <p className="text-sm font-medium text-slate-700">
                           Action Planning Guidance
                         </p>
@@ -1010,6 +1019,6 @@ export default async function AssessmentResultsPage({
           )}
         </section>
       </div>
-    </main>
+    </AppShell>
   );
 }

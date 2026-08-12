@@ -1,42 +1,43 @@
 import Link from "next/link";
 
-import { createAssessmentAction } from "./actions";
-
+import { AppShell } from "@/components/brand/AppShell";
 import {
   getAssessmentCreationOptions,
 } from "@/db/repositories/assessment-repository";
+
+import { createAssessmentAction } from "./actions";
 
 export default async function NewAssessmentPage() {
   const options =
     await getAssessmentCreationOptions();
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
-      <div className="mx-auto max-w-4xl">
+    <AppShell>
+      <div className="mx-auto w-full max-w-4xl px-6 py-10">
         <div className="mb-8">
           <Link
             href="/assessments"
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+            className="text-sm font-medium text-brand-purple hover:text-brand-purple-dark"
           >
             ← Back to Assessments
           </Link>
 
-          <p className="mt-6 text-sm font-medium text-indigo-600">
+          <p className="mt-6 text-sm font-medium text-brand-purple">
             GeoVaris Assessment Platform
           </p>
 
-          <h1 className="mt-1 text-3xl font-bold text-slate-900">
+          <h1 className="mt-1 text-3xl font-bold text-brand-text">
             Create New Assessment
           </h1>
 
-          <p className="mt-2 text-slate-600">
+          <p className="mt-2 text-brand-muted">
             Create a new draft assessment for a client.
           </p>
         </div>
 
         <form
           action={createAssessmentAction}
-          className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm"
+          className="rounded-xl border border-brand-border bg-brand-surface p-8 shadow-sm"
         >
           <div className="grid gap-6 md:grid-cols-2">
             <div>
@@ -183,13 +184,13 @@ export default async function NewAssessmentPage() {
 
             <button
               type="submit"
-              className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+              className="rounded-lg bg-brand-purple px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-purple-dark"
             >
               Create Assessment
             </button>
           </div>
         </form>
       </div>
-    </main>
+    </AppShell>
   );
 }
