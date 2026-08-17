@@ -348,6 +348,14 @@ export default async function AssessmentResultsPage({
             >
               Executive Scorecard
             </Link>
+
+            <Link
+              href={`/assessments/${assessment.assessmentCode}/report`}
+              className="rounded-lg bg-brand-purple px-4 py-2 text-sm font-medium text-white hover:bg-brand-purple-dark"
+            >
+              Export Client Report
+            </Link>
+
           </div>
         </div>
 

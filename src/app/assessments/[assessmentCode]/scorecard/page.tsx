@@ -110,19 +110,19 @@ export default async function ExecutiveScorecardPage({
             ← Back to Assessments
           </Link>
 
-          <div className="flex gap-4">
+          <div className="flex items-center gap-5">
             <Link
               href={`/assessments/${report.metadata.assessmentCode}/results`}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+              className="text-sm font-medium text-brand-purple hover:text-brand-purple-dark"
             >
               Detailed Results
             </Link>
 
             <Link
-              href={`/assessments/${report.metadata.assessmentCode}/report-preview`}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+              href={`/assessments/${report.metadata.assessmentCode}/report`}
+              className="text-sm font-medium text-brand-purple hover:text-brand-purple-dark"
             >
-              Report Preview
+              Export Report
             </Link>
           </div>
         </div>

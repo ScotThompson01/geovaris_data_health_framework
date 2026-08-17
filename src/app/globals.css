@@ -48,3 +48,48 @@ body {
   color: var(--geovaris-text);
   font-family: var(--font-inter), Arial, Helvetica, sans-serif;
 }
+
+@media print {
+  @page {
+    size: letter;
+    margin: 0.5in;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-final-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-finding,
+  .report-action {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-finding {
+    margin-bottom: 0.5rem;
+  }
+
+  .report-action {
+    margin-bottom: 0.5rem;
+  }
+
+  a {
+    text-decoration: none;
+  }
+}
