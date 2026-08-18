@@ -129,6 +129,58 @@ export async function getAssessmentTemplates() {
 }
 
 // ==================================================
+// Template Creation Options
+// ==================================================
+
+export async function getTemplateCreationOptions() {
+  const methodologies = await db
+    .select({
+      methodologyId:
+        assessmentMethodologies.id,
+
+      methodologyName:
+        assessmentMethodologies.name,
+
+      methodologyCode:
+        assessmentMethodologies.code,
+
+      methodologyStatus:
+        assessmentMethodologies.status,
+
+      organizationId:
+        assessmentMethodologies.organizationId,
+
+      frameworkId:
+        frameworks.id,
+
+      frameworkName:
+        frameworks.name,
+
+      frameworkCode:
+        frameworks.code,
+
+      frameworkStatus:
+        frameworks.status,
+    })
+    .from(assessmentMethodologies)
+    .innerJoin(
+      frameworks,
+      eq(
+        frameworks.id,
+        assessmentMethodologies.frameworkId,
+      ),
+    )
+    .orderBy(
+      asc(frameworks.name),
+      asc(assessmentMethodologies.name),
+    );
+
+  return {
+    methodologies,
+  };
+}
+
+// ==================================================
 // Template Details
 // ==================================================
 
@@ -1045,6 +1097,9 @@ export async function getAssessmentTemplateVersionById(
     templateId:
       template.templateId,
 
+    organizationId:
+      template.organizationId,
+
     templateName:
       template.templateName,
 
@@ -1057,6 +1112,274 @@ export async function getAssessmentTemplateVersionById(
     version,
   };
 }
+
+// ==================================================
+// Create Draft Template Section
+// ==================================================
+
+export type CreateDraftTemplateSectionInput = {
+  templateId: string;
+  versionId: string;
+  name: string;
+  code: string;
+  description?: string | null;
+  displayOrder?: number;
+  weight?: string | null;
+  isRequired?: boolean;
+};
+
+export async function createDraftTemplateSection(
+  input: CreateDraftTemplateSectionInput,
+) {
+  const editorData =
+    await getAssessmentTemplateVersionById(
+      input.templateId,
+      input.versionId,
+    );
+
+  if (!editorData) {
+    throw new Error(
+      "Template version was not found.",
+    );
+  }
+
+  if (
+    editorData.version.versionStatus !==
+    "draft"
+  ) {
+    throw new Error(
+      "Sections can only be added to draft template versions.",
+    );
+  }
+
+  const normalizedName =
+    input.name.trim();
+
+  const normalizedCode =
+    input.code.trim().toUpperCase();
+
+  if (!normalizedName) {
+    throw new Error(
+      "Section name is required.",
+    );
+  }
+
+  if (!normalizedCode) {
+    throw new Error(
+      "Section code is required.",
+    );
+  }
+
+  const duplicateCode =
+    editorData.version.sections.some(
+      (section) =>
+        section.sectionName
+          .trim()
+          .toLowerCase() ===
+        normalizedName.toLowerCase(),
+    );
+
+  if (duplicateCode) {
+    throw new Error(
+      `A section named "${normalizedName}" already exists in this version.`,
+    );
+  }
+
+  const displayOrder =
+    input.displayOrder ??
+    editorData.version.sections.length + 1;
+
+  const [createdSection] = await db
+    .insert(templateSections)
+    .values({
+      organizationId:
+        editorData.organizationId,
+
+      templateVersionId:
+        input.versionId,
+
+      parentSectionId:
+        null,
+
+      name:
+        normalizedName,
+
+      code:
+        normalizedCode,
+
+      description:
+        input.description?.trim() ||
+        null,
+
+      displayOrder,
+
+      weight:
+        input.weight?.trim() ||
+        null,
+
+      isRequired:
+        input.isRequired ?? true,
+
+      status:
+        "active",
+    })
+    .returning();
+
+  return createdSection;
+}
+
+// ==================================================
+// Create Draft Template Question
+// ==================================================
+
+export type CreateDraftTemplateQuestionInput = {
+  templateId: string;
+  versionId: string;
+  sectionId: string;
+  questionCode: string;
+  questionText: string;
+  guidanceText?: string | null;
+  answerType?: string;
+  displayOrder?: number;
+  weight?: string | null;
+  isRequired?: boolean;
+  allowsNotApplicable?: boolean;
+  requiresComment?: boolean;
+  requiresEvidence?: boolean;
+};
+
+export async function createDraftTemplateQuestion(
+  input: CreateDraftTemplateQuestionInput,
+) {
+  const editorData =
+    await getAssessmentTemplateVersionById(
+      input.templateId,
+      input.versionId,
+    );
+
+  if (!editorData) {
+    throw new Error(
+      "Template version was not found.",
+    );
+  }
+
+  if (
+    editorData.version.versionStatus !==
+    "draft"
+  ) {
+    throw new Error(
+      "Questions can only be added to draft template versions.",
+    );
+  }
+
+  const section =
+    editorData.version.sections.find(
+      (item) =>
+        item.sectionId ===
+        input.sectionId,
+    );
+
+  if (!section) {
+    throw new Error(
+      "Selected section was not found in this template version.",
+    );
+  }
+
+  const normalizedQuestionCode =
+    input.questionCode
+      .trim()
+      .toUpperCase();
+
+  const normalizedQuestionText =
+    input.questionText.trim();
+
+  if (!normalizedQuestionCode) {
+    throw new Error(
+      "Question code is required.",
+    );
+  }
+
+  if (!normalizedQuestionText) {
+    throw new Error(
+      "Question text is required.",
+    );
+  }
+
+  const duplicateQuestionCode =
+    editorData.version.questions.some(
+      (question) =>
+        question.questionCode
+          .trim()
+          .toUpperCase() ===
+        normalizedQuestionCode,
+    );
+
+  if (duplicateQuestionCode) {
+    throw new Error(
+      `Question code "${normalizedQuestionCode}" already exists in this version.`,
+    );
+  }
+
+  const displayOrder =
+    input.displayOrder ??
+    editorData.version.questions.length + 1;
+
+  const [createdQuestion] =
+    await db
+      .insert(templateQuestions)
+      .values({
+        organizationId:
+          editorData.organizationId,
+
+        templateVersionId:
+          input.versionId,
+
+        sectionId:
+          input.sectionId,
+
+        questionCode:
+          normalizedQuestionCode,
+
+        questionText:
+          normalizedQuestionText,
+
+        guidanceText:
+          input.guidanceText?.trim() ||
+          null,
+
+        answerType:
+          input.answerType?.trim() ||
+          "single_select",
+
+        displayOrder,
+
+        weight:
+          input.weight?.trim() ||
+          null,
+
+        isRequired:
+          input.isRequired ?? true,
+
+        allowsNotApplicable:
+          input.allowsNotApplicable ??
+          false,
+
+        requiresComment:
+          input.requiresComment ??
+          false,
+
+        requiresEvidence:
+          input.requiresEvidence ??
+          false,
+
+        status:
+          "active",
+      })
+      .returning();
+
+  return createdQuestion;
+}
+
 // ==================================================
 // Update Draft Question
 // ==================================================
@@ -1130,6 +1453,167 @@ export async function updateDraftTemplateQuestion(input: {
         input.questionId,
       ),
     );
+}
+
+// ==================================================
+// Create Draft Question Option
+// ==================================================
+
+export type CreateDraftQuestionOptionInput = {
+  templateId: string;
+  versionId: string;
+  questionId: string;
+  optionCode: string;
+  optionLabel: string;
+  optionDescription?: string | null;
+  optionValue?: string | null;
+  scoreValue?: string | null;
+  displayOrder?: number;
+  isNotApplicable?: boolean;
+  requiresComment?: boolean;
+  requiresEvidence?: boolean;
+};
+
+export async function createDraftQuestionOption(
+  input: CreateDraftQuestionOptionInput,
+) {
+  const editorData =
+    await getAssessmentTemplateVersionById(
+      input.templateId,
+      input.versionId,
+    );
+
+  if (!editorData) {
+    throw new Error(
+      "Template version was not found.",
+    );
+  }
+
+  if (
+    editorData.version.versionStatus !==
+    "draft"
+  ) {
+    throw new Error(
+      "Answer options can only be added to draft template versions.",
+    );
+  }
+
+  const question =
+    editorData.version.questions.find(
+      (item) =>
+        item.questionId ===
+        input.questionId,
+    );
+
+  if (!question) {
+    throw new Error(
+      "Question was not found in this template version.",
+    );
+  }
+
+  const normalizedOptionCode =
+    input.optionCode
+      .trim()
+      .toUpperCase();
+
+  const normalizedOptionLabel =
+    input.optionLabel.trim();
+
+  if (!normalizedOptionCode) {
+    throw new Error(
+      "Option code is required.",
+    );
+  }
+
+  if (!normalizedOptionLabel) {
+    throw new Error(
+      "Option label is required.",
+    );
+  }
+
+  const duplicateOptionCode =
+    question.options.some(
+      (option) =>
+        option.optionCode
+          .trim()
+          .toUpperCase() ===
+        normalizedOptionCode,
+    );
+
+  if (duplicateOptionCode) {
+    throw new Error(
+      `Option code "${normalizedOptionCode}" already exists for this question.`,
+    );
+  }
+
+  const displayOrder =
+    input.displayOrder ??
+    question.options.length + 1;
+
+  const normalizedScoreValue =
+    input.scoreValue?.trim() ||
+    null;
+
+  if (
+    normalizedScoreValue !== null &&
+    Number.isNaN(
+      Number(normalizedScoreValue),
+    )
+  ) {
+    throw new Error(
+      "Score value must be numeric.",
+    );
+  }
+
+  const [createdOption] =
+    await db
+      .insert(
+        templateQuestionOptions,
+      )
+      .values({
+        organizationId:
+          editorData.organizationId,
+
+        questionId:
+          input.questionId,
+
+        optionCode:
+          normalizedOptionCode,
+
+        optionLabel:
+          normalizedOptionLabel,
+
+        optionDescription:
+          input.optionDescription?.trim() ||
+          null,
+
+        optionValue:
+          input.optionValue?.trim() ||
+          null,
+
+        scoreValue:
+          normalizedScoreValue,
+
+        displayOrder,
+
+        isNotApplicable:
+          input.isNotApplicable ??
+          false,
+
+        requiresComment:
+          input.requiresComment ??
+          false,
+
+        requiresEvidence:
+          input.requiresEvidence ??
+          false,
+
+        status:
+          "active",
+      })
+      .returning();
+
+  return createdOption;
 }
 
 // ==================================================
@@ -1239,4 +1723,202 @@ export async function updateDraftTemplateQuestionOption(input: {
         input.optionId,
       ),
     );
+}
+// ==================================================
+// Create Assessment Template
+// ==================================================
+
+export type CreateAssessmentTemplateInput = {
+  methodologyId: string;
+  name: string;
+  description?: string | null;
+  templateScope?: string;
+};
+
+export async function createAssessmentTemplate(
+  input: CreateAssessmentTemplateInput,
+) {
+  const normalizedName =
+    input.name.trim();
+
+  if (!normalizedName) {
+    throw new Error(
+      "Template name is required.",
+    );
+  }
+
+  // -----------------------------------------------
+  // Validate methodology
+  // -----------------------------------------------
+
+  const [methodology] = await db
+    .select({
+      methodologyId:
+        assessmentMethodologies.id,
+
+      organizationId:
+        assessmentMethodologies.organizationId,
+
+      frameworkId:
+        assessmentMethodologies.frameworkId,
+    })
+    .from(assessmentMethodologies)
+    .where(
+      eq(
+        assessmentMethodologies.id,
+        input.methodologyId,
+      ),
+    )
+    .limit(1);
+
+  if (!methodology) {
+    throw new Error(
+      "Assessment methodology was not found.",
+    );
+  }
+
+  // -----------------------------------------------
+  // Prevent duplicate template name
+  // -----------------------------------------------
+
+  const existingTemplates = await db
+    .select({
+      templateId:
+        assessmentTemplates.id,
+
+      templateName:
+        assessmentTemplates.name,
+    })
+    .from(assessmentTemplates)
+    .where(
+      eq(
+        assessmentTemplates.methodologyId,
+        input.methodologyId,
+      ),
+    );
+
+  const duplicateTemplate =
+    existingTemplates.some(
+      (template) =>
+        template.templateName
+          .trim()
+          .toLowerCase() ===
+        normalizedName.toLowerCase(),
+    );
+
+  if (duplicateTemplate) {
+    throw new Error(
+      `A template named "${normalizedName}" already exists for this methodology.`,
+    );
+  }
+
+  // -----------------------------------------------
+  // Generate IDs
+  // -----------------------------------------------
+
+  const templateId =
+    randomUUID();
+
+  const versionId =
+    randomUUID();
+
+  // -----------------------------------------------
+  // Build template
+  // -----------------------------------------------
+
+  const newTemplate = {
+    id:
+      templateId,
+
+    organizationId:
+      methodology.organizationId,
+
+    methodologyId:
+      methodology.methodologyId,
+
+    name:
+      normalizedName,
+
+    description:
+      input.description?.trim() ||
+      null,
+
+    templateScope:
+      input.templateScope?.trim() ||
+      "master",
+
+    status:
+      "draft",
+  };
+
+  // -----------------------------------------------
+  // Build initial Version 1.0
+  // -----------------------------------------------
+
+  const initialVersion = {
+    id:
+      versionId,
+
+    organizationId:
+      methodology.organizationId,
+
+    templateId,
+
+    versionNumber:
+      1,
+
+    versionLabel:
+      "1.0",
+
+    status:
+      "draft",
+
+    changeSummary:
+      "Initial template version.",
+
+    publishedAt:
+      null,
+  };
+
+  // -----------------------------------------------
+  // Create atomically
+  // -----------------------------------------------
+
+  await db.batch([
+    db
+      .insert(
+        assessmentTemplates,
+      )
+      .values(
+        newTemplate,
+      ),
+
+    db
+      .insert(
+        assessmentTemplateVersions,
+      )
+      .values(
+        initialVersion,
+      ),
+  ]);
+
+  return {
+    templateId,
+    versionId,
+
+    templateName:
+      normalizedName,
+
+    versionNumber:
+      1,
+
+    versionLabel:
+      "1.0",
+
+    templateStatus:
+      "draft",
+
+    versionStatus:
+      "draft",
+  };
 }

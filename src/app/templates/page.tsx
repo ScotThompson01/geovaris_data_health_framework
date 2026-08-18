@@ -68,6 +68,13 @@ export default async function TemplatesPage() {
             </p>
           </div>
 
+          <Link
+            href="/templates/new"
+            className="rounded-lg bg-brand-purple px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-purple-dark"
+          >
+            Create New Template
+          </Link>
+
           <div className="flex flex-wrap gap-3">
             <Link
               href="/"
