@@ -10,6 +10,8 @@ import {
 import { db } from "@/db/client";
 
 import {
+  answerOptionSetItems,
+  answerOptionSets,
   assessmentMethodologies,
   assessmentTemplates,
   assessmentTemplateVersions,
@@ -178,6 +180,49 @@ export async function getTemplateCreationOptions() {
   return {
     methodologies,
   };
+}
+
+// ==================================================
+// Answer Option Set List
+// ==================================================
+
+export async function getActiveAnswerOptionSets(
+  organizationId: string,
+) {
+  const sets = await db
+    .select({
+      answerOptionSetId:
+        answerOptionSets.id,
+
+      name:
+        answerOptionSets.name,
+
+      code:
+        answerOptionSets.code,
+
+      description:
+        answerOptionSets.description,
+
+      status:
+        answerOptionSets.status,
+    })
+    .from(answerOptionSets)
+    .where(
+      eq(
+        answerOptionSets.organizationId,
+        organizationId,
+      ),
+    )
+    .orderBy(
+      asc(
+        answerOptionSets.name,
+      ),
+    );
+
+  return sets.filter(
+    (set) =>
+      set.status === "active",
+  );
 }
 
 // ==================================================
@@ -1614,6 +1659,231 @@ export async function createDraftQuestionOption(
       .returning();
 
   return createdOption;
+}
+
+// ==================================================
+// Apply Answer Option Set
+// ==================================================
+
+export type ApplyAnswerOptionSetInput = {
+  templateId: string;
+  versionId: string;
+  questionId: string;
+  answerOptionSetId: string;
+};
+
+export async function applyAnswerOptionSet(
+  input: ApplyAnswerOptionSetInput,
+) {
+  // -----------------------------------------------
+  // Validate draft template version
+  // -----------------------------------------------
+
+  const editorData =
+    await getAssessmentTemplateVersionById(
+      input.templateId,
+      input.versionId,
+    );
+
+  if (!editorData) {
+    throw new Error(
+      "Template version was not found.",
+    );
+  }
+
+  if (
+    editorData.version.versionStatus !==
+    "draft"
+  ) {
+    throw new Error(
+      "Answer option sets can only be applied to draft template versions.",
+    );
+  }
+
+  // -----------------------------------------------
+  // Validate question
+  // -----------------------------------------------
+
+  const question =
+    editorData.version.questions.find(
+      (item) =>
+        item.questionId ===
+        input.questionId,
+    );
+
+  if (!question) {
+    throw new Error(
+      "Question was not found in this template version.",
+    );
+  }
+
+  // -----------------------------------------------
+  // Prevent accidental duplicate options
+  // -----------------------------------------------
+
+  if (question.options.length > 0) {
+    throw new Error(
+      "This question already contains answer options. Remove the existing options before applying an answer option set.",
+    );
+  }
+
+  // -----------------------------------------------
+  // Validate answer option set
+  // -----------------------------------------------
+
+  const [answerOptionSet] = await db
+    .select({
+      answerOptionSetId:
+        answerOptionSets.id,
+
+      organizationId:
+        answerOptionSets.organizationId,
+
+      name:
+        answerOptionSets.name,
+
+      code:
+        answerOptionSets.code,
+
+      status:
+        answerOptionSets.status,
+    })
+    .from(answerOptionSets)
+    .where(
+      eq(
+        answerOptionSets.id,
+        input.answerOptionSetId,
+      ),
+    )
+    .limit(1);
+
+  if (!answerOptionSet) {
+    throw new Error(
+      "Answer option set was not found.",
+    );
+  }
+
+  if (
+    answerOptionSet.organizationId !==
+    editorData.organizationId
+  ) {
+    throw new Error(
+      "Answer option set does not belong to this organization.",
+    );
+  }
+
+  if (
+    answerOptionSet.status !== "active"
+  ) {
+    throw new Error(
+      "Only active answer option sets can be applied.",
+    );
+  }
+
+  // -----------------------------------------------
+  // Load answer option set items
+  // -----------------------------------------------
+
+  const setItems = await db
+    .select()
+    .from(answerOptionSetItems)
+    .where(
+      eq(
+        answerOptionSetItems.answerOptionSetId,
+        input.answerOptionSetId,
+      ),
+    )
+    .orderBy(
+      asc(
+        answerOptionSetItems.displayOrder,
+      ),
+    );
+
+  if (setItems.length === 0) {
+    throw new Error(
+      "Answer option set does not contain any options.",
+    );
+  }
+
+  // -----------------------------------------------
+  // Build question options
+  // -----------------------------------------------
+
+  const newOptions =
+    setItems.map(
+      (item) => ({
+        id:
+          randomUUID(),
+
+        organizationId:
+          editorData.organizationId,
+
+        questionId:
+          input.questionId,
+
+        optionCode:
+          item.optionCode,
+
+        optionLabel:
+          item.optionLabel,
+
+        optionDescription:
+          item.optionDescription,
+
+        optionValue:
+          item.optionValue,
+
+        scoreValue:
+          item.scoreValue,
+
+        displayOrder:
+          item.displayOrder,
+
+        isNotApplicable:
+          item.isNotApplicable,
+
+        requiresComment:
+          item.requiresComment,
+
+        requiresEvidence:
+          item.requiresEvidence,
+
+        status:
+          item.status,
+      }),
+    );
+
+  // -----------------------------------------------
+  // Apply set
+  // -----------------------------------------------
+
+  await db
+    .insert(
+      templateQuestionOptions,
+    )
+    .values(
+      newOptions,
+    );
+
+  return {
+    templateId:
+      input.templateId,
+
+    versionId:
+      input.versionId,
+
+    questionId:
+      input.questionId,
+
+    answerOptionSetId:
+      input.answerOptionSetId,
+
+    answerOptionSetName:
+      answerOptionSet.name,
+
+    optionCount:
+      newOptions.length,
+  };
 }
 
 // ==================================================

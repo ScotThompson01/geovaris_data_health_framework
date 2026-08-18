@@ -12,6 +12,8 @@ export * from "./assessment-response";
 export * from "./assessment-response-option";
 export * from "./assessment-response-score";
 export * from "./assessment-score";
+export * from "./answer-option-set";
+export * from "./answer-option-set-item";
 
 
 
