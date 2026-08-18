@@ -4,6 +4,8 @@ import { db } from "./client";
 import { recalculateAssessmentScores } from "./services/assessment-scoring-service";
 
 import {
+  answerOptionSetItems,
+  answerOptionSets,
   assessmentMethodologies,
   assessmentResponses,
   assessments,
@@ -229,6 +231,127 @@ async function seed() {
     console.log("Created organization: GeoVaris");
   } else {
     console.log("Organization already exists: GeoVaris");
+  }
+
+  // ==================================================
+  // GDHF Standard Answer Option Set
+  // ==================================================
+
+  let [standardAnswerSet] = await db
+    .select()
+    .from(answerOptionSets)
+    .where(
+      and(
+        eq(
+          answerOptionSets.organizationId,
+          geovaris.id,
+        ),
+        eq(
+          answerOptionSets.code,
+          "GDHF-STANDARD-024-NA",
+        ),
+      ),
+    )
+    .limit(1);
+
+  if (!standardAnswerSet) {
+    [standardAnswerSet] = await db
+      .insert(answerOptionSets)
+      .values({
+        organizationId:
+          geovaris.id,
+
+        name:
+          "GDHF Standard 0-2-4 + N/A",
+
+        code:
+          "GDHF-STANDARD-024-NA",
+
+        description:
+          "Standard GDHF answer scale using No, Partially, Yes, and Not Applicable.",
+
+        status:
+          "active",
+      })
+      .returning();
+
+    console.log(
+      "Created answer option set: GDHF Standard 0-2-4 + N/A",
+    );
+  } else {
+    console.log(
+      "Answer option set already exists: GDHF Standard 0-2-4 + N/A",
+    );
+  }
+
+  // ==================================================
+  // GDHF Standard Answer Option Set Items
+  // ==================================================
+
+  for (const option of standardAnswerOptions) {
+    const [existingSetItem] = await db
+      .select()
+      .from(answerOptionSetItems)
+      .where(
+        and(
+          eq(
+            answerOptionSetItems.answerOptionSetId,
+            standardAnswerSet.id,
+          ),
+          eq(
+            answerOptionSetItems.optionCode,
+            option.optionCode,
+          ),
+        ),
+      )
+      .limit(1);
+
+    if (!existingSetItem) {
+      await db
+        .insert(answerOptionSetItems)
+        .values({
+          answerOptionSetId:
+            standardAnswerSet.id,
+
+          optionCode:
+            option.optionCode,
+
+          optionLabel:
+            option.optionLabel,
+
+          optionDescription:
+            option.optionDescription,
+
+          optionValue:
+            option.optionValue,
+
+          scoreValue:
+            option.scoreValue,
+
+          displayOrder:
+            option.displayOrder,
+
+          isNotApplicable:
+            option.isNotApplicable,
+
+          requiresComment:
+            false,
+
+          requiresEvidence:
+            false,
+
+          status:
+            "active",
+        });
+
+      console.log(
+        `Created answer set item: ${option.optionLabel}`,
+      );
+    } else {
+      console.log(
+        `Answer set item already exists: ${option.optionLabel}`,
+      );
+    }
   }
 
   // ==================================================

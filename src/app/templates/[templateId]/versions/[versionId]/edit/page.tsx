@@ -4,10 +4,12 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/brand/AppShell";
 
 import {
+  getActiveAnswerOptionSets,
   getAssessmentTemplateVersionById,
 } from "@/db/repositories/template-repository";
 
 import {
+  applyAnswerOptionSetAction,
   createOptionAction,
   createQuestionAction,
   createSectionAction,
@@ -50,6 +52,11 @@ export default async function EditTemplateVersionPage({
   if (!editorData) {
     notFound();
   }
+
+  const answerOptionSets =
+    await getActiveAnswerOptionSets(
+      editorData.organizationId,
+    );
 
   const {
     version,
@@ -515,6 +522,143 @@ export default async function EditTemplateVersionPage({
             </form>
           </section>
         )}
+
+        {/* Apply Answer Option Set */}
+
+        {isDraft &&
+          version.questions.length > 0 &&
+          answerOptionSets.length > 0 && (
+            <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+              <div className="mb-5">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-purple">
+                  Scoring
+                </p>
+
+                <h2 className="mt-2 text-xl font-bold text-brand-text">
+                  Apply Answer Option Set
+                </h2>
+
+                <p className="mt-2 text-sm text-brand-muted">
+                  Apply a reusable answer and scoring
+                  configuration to a question that does
+                  not yet contain answer options.
+                </p>
+              </div>
+
+              <form
+                action={
+                  applyAnswerOptionSetAction
+                }
+                className="grid gap-5 md:grid-cols-2"
+              >
+                <input
+                  type="hidden"
+                  name="templateId"
+                  value={templateId}
+                />
+
+                <input
+                  type="hidden"
+                  name="versionId"
+                  value={versionId}
+                />
+
+                <div>
+                  <label
+                    htmlFor="answerSetQuestionId"
+                    className="block text-sm font-medium text-brand-text"
+                  >
+                    Question
+                  </label>
+
+                  <select
+                    id="answerSetQuestionId"
+                    name="questionId"
+                    required
+                    defaultValue=""
+                    className="mt-2 w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 text-brand-text"
+                  >
+                    <option
+                      value=""
+                      disabled
+                    >
+                      Select question
+                    </option>
+
+                    {version.questions
+                      .filter(
+                        (question) =>
+                          question.options.length === 0,
+                      )
+                      .map(
+                        (question) => (
+                          <option
+                            key={
+                              question.questionId
+                            }
+                            value={
+                              question.questionId
+                            }
+                          >
+                            {question.questionCode}
+                            {" — "}
+                            {question.questionText}
+                          </option>
+                        ),
+                      )}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="answerOptionSetId"
+                    className="block text-sm font-medium text-brand-text"
+                  >
+                    Answer Option Set
+                  </label>
+
+                  <select
+                    id="answerOptionSetId"
+                    name="answerOptionSetId"
+                    required
+                    defaultValue=""
+                    className="mt-2 w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 text-brand-text"
+                  >
+                    <option
+                      value=""
+                      disabled
+                    >
+                      Select answer option set
+                    </option>
+
+                    {answerOptionSets.map(
+                      (set) => (
+                        <option
+                          key={
+                            set.answerOptionSetId
+                          }
+                          value={
+                            set.answerOptionSetId
+                          }
+                        >
+                          {set.name}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+
+                <div className="md:col-span-2 flex justify-end border-t border-brand-border pt-5">
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-brand-purple px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-purple-dark"
+                  >
+                    Apply Answer Set
+                  </button>
+                </div>
+              </form>
+            </section>
+          )}
 
         {/* Add Answer Option */}
 

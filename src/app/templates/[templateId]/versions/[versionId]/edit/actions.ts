@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import {
+  applyAnswerOptionSet,
   createDraftQuestionOption,
   createDraftTemplateQuestion,
   createDraftTemplateSection,
@@ -224,6 +225,52 @@ export async function createQuestionAction(
 // Create Answer Option
 // ==================================================
 
+// ==================================================
+// Apply Answer Option Set
+// ==================================================
+
+export async function applyAnswerOptionSetAction(
+  formData: FormData,
+) {
+  const templateId =
+    formData.get("templateId");
+
+  const versionId =
+    formData.get("versionId");
+
+  const questionId =
+    formData.get("questionId");
+
+  const answerOptionSetId =
+    formData.get("answerOptionSetId");
+
+  if (
+    typeof templateId !== "string" ||
+    typeof versionId !== "string" ||
+    typeof questionId !== "string" ||
+    typeof answerOptionSetId !== "string"
+  ) {
+    throw new Error(
+      "Invalid answer option set request.",
+    );
+  }
+
+  await applyAnswerOptionSet({
+    templateId,
+    versionId,
+    questionId,
+    answerOptionSetId,
+  });
+
+  revalidatePath(
+    `/templates/${templateId}/versions/${versionId}/edit`,
+  );
+
+  revalidatePath(
+    `/templates/${templateId}`,
+  );
+}
+
 export async function createOptionAction(
   formData: FormData,
 ) {
@@ -277,7 +324,7 @@ export async function createOptionAction(
 
   const parsedDisplayOrder =
     typeof displayOrder === "string" &&
-    displayOrder.trim()
+      displayOrder.trim()
       ? Number(displayOrder)
       : undefined;
 
