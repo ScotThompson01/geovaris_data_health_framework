@@ -8,6 +8,9 @@ import {
 } from "@/db/repositories/template-repository";
 
 import {
+  createOptionAction,
+  createQuestionAction,
+  createSectionAction,
   updateOptionAction,
   updateQuestionAction,
 } from "./actions";
@@ -114,6 +117,626 @@ export default async function EditTemplateVersionPage({
             </div>
           )}
         </section>
+
+        {/* Add Section */}
+
+        {isDraft && (
+          <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+            <div className="mb-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-purple">
+                Template Structure
+              </p>
+
+              <h2 className="mt-2 text-xl font-bold text-brand-text">
+                Add Section
+              </h2>
+
+              <p className="mt-2 text-sm text-brand-muted">
+                Add a new section to this draft template version.
+              </p>
+            </div>
+
+            <form
+              action={createSectionAction}
+              className="grid gap-5 md:grid-cols-2"
+            >
+              <input
+                type="hidden"
+                name="templateId"
+                value={templateId}
+              />
+
+              <input
+                type="hidden"
+                name="versionId"
+                value={versionId}
+              />
+
+              <div>
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Section Name
+                </label>
+
+                <input
+                  id="name"
+                  name="name"
+                  required
+                  maxLength={200}
+                  placeholder="Data Governance"
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="code"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Section Code
+                </label>
+
+                <input
+                  id="code"
+                  name="code"
+                  required
+                  maxLength={50}
+                  placeholder="GOV"
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="displayOrder"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Display Order
+                </label>
+
+                <input
+                  id="displayOrder"
+                  name="displayOrder"
+                  type="number"
+                  min={1}
+                  placeholder="1"
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="weight"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Weight
+                </label>
+
+                <input
+                  id="weight"
+                  name="weight"
+                  type="number"
+                  step="0.0001"
+                  min={0}
+                  placeholder="25"
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label
+                  htmlFor="description"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Description
+                </label>
+
+                <textarea
+                  id="description"
+                  name="description"
+                  rows={3}
+                  placeholder="Describe what this section evaluates."
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              <div className="md:col-span-2 flex items-center justify-between gap-4">
+                <label className="flex items-center gap-3 text-sm text-brand-text">
+                  <input
+                    type="checkbox"
+                    name="isRequired"
+                    defaultChecked
+                    className="h-4 w-4"
+                  />
+
+                  Required Section
+                </label>
+
+                <button
+                  type="submit"
+                  className="rounded-lg bg-brand-purple px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-purple-dark"
+                >
+                  Add Section
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {/* Add Question */}
+
+        {isDraft && editorData.version.sections.length > 0 && (
+          <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+            <div className="mb-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-purple">
+                Template Content
+              </p>
+
+              <h2 className="mt-2 text-xl font-bold text-brand-text">
+                Add Question
+              </h2>
+
+              <p className="mt-2 text-sm text-brand-muted">
+                Add a question to one of the sections in this
+                draft template version.
+              </p>
+            </div>
+
+            <form
+              action={createQuestionAction}
+              className="grid gap-5 md:grid-cols-2"
+            >
+              <input
+                type="hidden"
+                name="templateId"
+                value={templateId}
+              />
+
+              <input
+                type="hidden"
+                name="versionId"
+                value={versionId}
+              />
+
+              {/* Section */}
+
+              <div>
+                <label
+                  htmlFor="questionSectionId"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Section
+                </label>
+
+                <select
+                  id="questionSectionId"
+                  name="sectionId"
+                  required
+                  defaultValue=""
+                  className="mt-2 w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 text-brand-text"
+                >
+                  <option
+                    value=""
+                    disabled
+                  >
+                    Select section
+                  </option>
+
+                  {editorData.version.sections.map(
+                    (section) => (
+                      <option
+                        key={section.sectionId}
+                        value={section.sectionId}
+                      >
+                        {section.sectionName}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </div>
+
+              {/* Question Code */}
+
+              <div>
+                <label
+                  htmlFor="questionCode"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Question Code
+                </label>
+
+                <input
+                  id="questionCode"
+                  name="questionCode"
+                  required
+                  maxLength={50}
+                  placeholder="GOV-001"
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              {/* Question Text */}
+
+              <div className="md:col-span-2">
+                <label
+                  htmlFor="newQuestionText"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Question
+                </label>
+
+                <textarea
+                  id="newQuestionText"
+                  name="questionText"
+                  required
+                  rows={3}
+                  placeholder="Does the organization have clearly defined ownership for important data?"
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              {/* Guidance */}
+
+              <div className="md:col-span-2">
+                <label
+                  htmlFor="newGuidanceText"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Guidance
+                </label>
+
+                <textarea
+                  id="newGuidanceText"
+                  name="guidanceText"
+                  rows={3}
+                  placeholder="Provide additional guidance to help the assessor interpret this question."
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              {/* Answer Type */}
+
+              <div>
+                <label
+                  htmlFor="answerType"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Answer Type
+                </label>
+
+                <select
+                  id="answerType"
+                  name="answerType"
+                  defaultValue="single_select"
+                  className="mt-2 w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 text-brand-text"
+                >
+                  <option value="single_select">
+                    Single Select
+                  </option>
+                </select>
+              </div>
+
+              {/* Display Order */}
+
+              <div>
+                <label
+                  htmlFor="questionDisplayOrder"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Display Order
+                </label>
+
+                <input
+                  id="questionDisplayOrder"
+                  name="displayOrder"
+                  type="number"
+                  min={1}
+                  placeholder="1"
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              {/* Weight */}
+
+              <div>
+                <label
+                  htmlFor="questionWeight"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Weight
+                </label>
+
+                <input
+                  id="questionWeight"
+                  name="weight"
+                  type="number"
+                  min={0}
+                  step="0.0001"
+                  placeholder="1"
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              {/* Settings */}
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-brand-text">
+                  Question Settings
+                </p>
+
+                <label className="flex items-center gap-3 text-sm text-brand-text">
+                  <input
+                    type="checkbox"
+                    name="isRequired"
+                    defaultChecked
+                    className="h-4 w-4"
+                  />
+                  Required
+                </label>
+
+                <label className="flex items-center gap-3 text-sm text-brand-text">
+                  <input
+                    type="checkbox"
+                    name="allowsNotApplicable"
+                    className="h-4 w-4"
+                  />
+                  Allow Not Applicable
+                </label>
+
+                <label className="flex items-center gap-3 text-sm text-brand-text">
+                  <input
+                    type="checkbox"
+                    name="requiresComment"
+                    className="h-4 w-4"
+                  />
+                  Require Comment
+                </label>
+
+                <label className="flex items-center gap-3 text-sm text-brand-text">
+                  <input
+                    type="checkbox"
+                    name="requiresEvidence"
+                    className="h-4 w-4"
+                  />
+                  Require Evidence
+                </label>
+              </div>
+
+              <div className="md:col-span-2 flex justify-end border-t border-brand-border pt-5">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-brand-purple px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-purple-dark"
+                >
+                  Add Question
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {/* Add Answer Option */}
+
+        {isDraft && editorData.version.questions.length > 0 && (
+          <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+            <div className="mb-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-purple">
+                Scoring
+              </p>
+
+              <h2 className="mt-2 text-xl font-bold text-brand-text">
+                Add Answer Option
+              </h2>
+
+              <p className="mt-2 text-sm text-brand-muted">
+                Add an answer choice and optional score to a
+                question in this draft template.
+              </p>
+            </div>
+
+            <form
+              action={createOptionAction}
+              className="grid gap-5 md:grid-cols-2"
+            >
+              <input
+                type="hidden"
+                name="templateId"
+                value={templateId}
+              />
+
+              <input
+                type="hidden"
+                name="versionId"
+                value={versionId}
+              />
+
+              <div className="md:col-span-2">
+                <label
+                  htmlFor="optionQuestionId"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Question
+                </label>
+
+                <select
+                  id="optionQuestionId"
+                  name="questionId"
+                  required
+                  defaultValue=""
+                  className="mt-2 w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 text-brand-text"
+                >
+                  <option
+                    value=""
+                    disabled
+                  >
+                    Select question
+                  </option>
+
+                  {editorData.version.questions.map(
+                    (question) => (
+                      <option
+                        key={question.questionId}
+                        value={question.questionId}
+                      >
+                        {question.questionCode} —{" "}
+                        {question.questionText}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="newOptionCode"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Option Code
+                </label>
+
+                <input
+                  id="newOptionCode"
+                  name="optionCode"
+                  required
+                  maxLength={50}
+                  placeholder="YES"
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="newOptionLabel"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Option Label
+                </label>
+
+                <input
+                  id="newOptionLabel"
+                  name="optionLabel"
+                  required
+                  maxLength={250}
+                  placeholder="Yes"
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label
+                  htmlFor="newOptionDescription"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Description
+                </label>
+
+                <textarea
+                  id="newOptionDescription"
+                  name="optionDescription"
+                  rows={2}
+                  placeholder="Describe what this answer represents."
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="newOptionValue"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Option Value
+                </label>
+
+                <input
+                  id="newOptionValue"
+                  name="optionValue"
+                  maxLength={100}
+                  placeholder="yes"
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="newScoreValue"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Score
+                </label>
+
+                <input
+                  id="newScoreValue"
+                  name="scoreValue"
+                  type="number"
+                  step="0.0001"
+                  placeholder="4"
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="optionDisplayOrder"
+                  className="block text-sm font-medium text-brand-text"
+                >
+                  Display Order
+                </label>
+
+                <input
+                  id="optionDisplayOrder"
+                  name="displayOrder"
+                  type="number"
+                  min={1}
+                  placeholder="1"
+                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-brand-text">
+                  Option Settings
+                </p>
+
+                <label className="flex items-center gap-3 text-sm text-brand-text">
+                  <input
+                    type="checkbox"
+                    name="isNotApplicable"
+                    className="h-4 w-4"
+                  />
+                  Not Applicable
+                </label>
+
+                <label className="flex items-center gap-3 text-sm text-brand-text">
+                  <input
+                    type="checkbox"
+                    name="requiresComment"
+                    className="h-4 w-4"
+                  />
+                  Require Comment
+                </label>
+
+                <label className="flex items-center gap-3 text-sm text-brand-text">
+                  <input
+                    type="checkbox"
+                    name="requiresEvidence"
+                    className="h-4 w-4"
+                  />
+                  Require Evidence
+                </label>
+              </div>
+
+              <div className="md:col-span-2 flex justify-end border-t border-brand-border pt-5">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-brand-purple px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-purple-dark"
+                >
+                  Add Answer Option
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
 
         {/* Questions */}
 
