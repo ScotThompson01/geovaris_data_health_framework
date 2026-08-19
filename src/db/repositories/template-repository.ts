@@ -1160,6 +1160,323 @@ export async function getAssessmentTemplateVersionById(
 }
 
 // ==================================================
+// Validate Template Version
+// ==================================================
+
+export type TemplateValidationIssue = {
+  code: string;
+  message: string;
+  severity: "error" | "warning";
+};
+
+export type TemplateValidationResult = {
+  isValid: boolean;
+  errors: TemplateValidationIssue[];
+  warnings: TemplateValidationIssue[];
+};
+
+export async function validateTemplateVersion(
+  templateId: string,
+  versionId: string,
+): Promise<TemplateValidationResult> {
+  const editorData =
+    await getAssessmentTemplateVersionById(
+      templateId,
+      versionId,
+    );
+
+  if (!editorData) {
+    return {
+      isValid: false,
+
+      errors: [
+        {
+          code:
+            "VERSION_NOT_FOUND",
+
+          message:
+            "Template version was not found.",
+
+          severity:
+            "error",
+        },
+      ],
+
+      warnings: [],
+    };
+  }
+
+  const errors: TemplateValidationIssue[] =
+    [];
+
+  const warnings: TemplateValidationIssue[] =
+    [];
+
+  const {
+    sections,
+    questions,
+  } = editorData.version;
+
+  // -----------------------------------------------
+  // Section validation
+  // -----------------------------------------------
+
+  if (sections.length === 0) {
+    errors.push({
+      code:
+        "NO_SECTIONS",
+
+      message:
+        "Template version must contain at least one section.",
+
+      severity:
+        "error",
+    });
+  }
+
+  for (const section of sections) {
+    const sectionQuestions =
+      questions.filter(
+        (question) =>
+          question.sectionId ===
+          section.sectionId,
+      );
+
+    if (sectionQuestions.length === 0) {
+      errors.push({
+        code:
+          "SECTION_WITHOUT_QUESTIONS",
+
+        message:
+          `Section "${section.sectionName}" does not contain any questions.`,
+
+        severity:
+          "error",
+      });
+    }
+  }
+
+  // -----------------------------------------------
+  // Question validation
+  // -----------------------------------------------
+
+  if (questions.length === 0) {
+    errors.push({
+      code:
+        "NO_QUESTIONS",
+
+      message:
+        "Template version must contain at least one question.",
+
+      severity:
+        "error",
+    });
+  }
+
+  for (const question of questions) {
+    if (!question.questionCode.trim()) {
+      errors.push({
+        code:
+          "QUESTION_CODE_REQUIRED",
+
+        message:
+          "A question is missing its question code.",
+
+        severity:
+          "error",
+      });
+    }
+
+    if (!question.questionText.trim()) {
+      errors.push({
+        code:
+          "QUESTION_TEXT_REQUIRED",
+
+        message:
+          `Question "${question.questionCode}" is missing question text.`,
+
+        severity:
+          "error",
+      });
+    }
+
+    if (
+      question.answerType ===
+      "single_select" &&
+      question.options.length === 0
+    ) {
+      errors.push({
+        code:
+          "QUESTION_WITHOUT_OPTIONS",
+
+        message:
+          `Question "${question.questionCode}" requires at least one answer option.`,
+
+        severity:
+          "error",
+      });
+    }
+
+    // ---------------------------------------------
+    // Answer-option validation
+    // ---------------------------------------------
+
+    const seenOptionCodes =
+      new Set<string>();
+
+    for (const option of question.options) {
+      const normalizedOptionCode =
+        option.optionCode
+          .trim()
+          .toUpperCase();
+
+      if (!normalizedOptionCode) {
+        errors.push({
+          code:
+            "OPTION_CODE_REQUIRED",
+
+          message:
+            `Question "${question.questionCode}" contains an answer option without a code.`,
+
+          severity:
+            "error",
+        });
+      }
+
+      if (
+        seenOptionCodes.has(
+          normalizedOptionCode,
+        )
+      ) {
+        errors.push({
+          code:
+            "DUPLICATE_OPTION_CODE",
+
+          message:
+            `Question "${question.questionCode}" contains duplicate option code "${normalizedOptionCode}".`,
+
+          severity:
+            "error",
+        });
+      }
+
+      seenOptionCodes.add(
+        normalizedOptionCode,
+      );
+
+      if (!option.optionLabel.trim()) {
+        errors.push({
+          code:
+            "OPTION_LABEL_REQUIRED",
+
+          message:
+            `Question "${question.questionCode}" contains an answer option without a label.`,
+
+          severity:
+            "error",
+        });
+      }
+
+      if (
+        !option.isNotApplicable &&
+        option.scoreValue === null
+      ) {
+        errors.push({
+          code:
+            "SCORE_REQUIRED",
+
+          message:
+            `Question "${question.questionCode}" option "${option.optionLabel}" requires a score value.`,
+
+          severity:
+            "error",
+        });
+      }
+
+      if (
+        option.scoreValue !== null &&
+        Number.isNaN(
+          Number(
+            option.scoreValue,
+          ),
+        )
+      ) {
+        errors.push({
+          code:
+            "INVALID_SCORE",
+
+          message:
+            `Question "${question.questionCode}" option "${option.optionLabel}" has an invalid score value.`,
+
+          severity:
+            "error",
+        });
+      }
+
+      if (
+        option.isNotApplicable &&
+        option.scoreValue !== null
+      ) {
+        warnings.push({
+          code:
+            "NA_WITH_SCORE",
+
+          message:
+            `Question "${question.questionCode}" option "${option.optionLabel}" is marked Not Applicable but also has a score.`,
+
+          severity:
+            "warning",
+        });
+      }
+    }
+
+    // ---------------------------------------------
+    // Question-level warnings
+    // ---------------------------------------------
+
+    if (
+      question.guidanceText === null ||
+      !question.guidanceText.trim()
+    ) {
+      warnings.push({
+        code:
+          "MISSING_GUIDANCE",
+
+        message:
+          `Question "${question.questionCode}" does not contain guidance text.`,
+
+        severity:
+          "warning",
+      });
+    }
+
+    if (
+      question.weight === null
+    ) {
+      warnings.push({
+        code:
+          "QUESTION_WEIGHT_MISSING",
+
+        message:
+          `Question "${question.questionCode}" does not have a configured weight.`,
+
+        severity:
+          "warning",
+      });
+    }
+  }
+
+  return {
+    isValid:
+      errors.length === 0,
+
+    errors,
+
+    warnings,
+  };
+}
+
+// ==================================================
 // Publish Draft Template Version
 // ==================================================
 
@@ -1200,19 +1517,27 @@ export async function publishDraftTemplateVersion(
   // Basic structural validation
   // -----------------------------------------------
 
-  if (
-    editorData.version.sections.length === 0
-  ) {
-    throw new Error(
-      "A template version must contain at least one section before it can be published.",
-    );
-  }
+  // -----------------------------------------------
+  // Publication validation
+  // -----------------------------------------------
 
-  if (
-    editorData.version.questions.length === 0
-  ) {
+  const validation =
+    await validateTemplateVersion(
+      input.templateId,
+      input.versionId,
+    );
+
+  if (!validation.isValid) {
+    const errorSummary =
+      validation.errors
+        .map(
+          (issue) =>
+            issue.message,
+        )
+        .join(" ");
+
     throw new Error(
-      "A template version must contain at least one question before it can be published.",
+      `Template version cannot be published. ${errorSummary}`,
     );
   }
 
