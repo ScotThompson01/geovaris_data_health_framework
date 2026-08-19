@@ -39,6 +39,17 @@ export default async function AssessmentsPage() {
       <div className="mx-auto w-full max-w-7xl px-6 py-10">
         {/* Header */}
 
+        {/* Navigation */}
+
+        <div className="mb-6">
+          <Link
+            href="/"
+            className="text-sm font-medium text-brand-purple hover:text-brand-purple-dark"
+          >
+            ← Back to Home
+          </Link>
+        </div>
+
         <div className="mb-8">
           <p className="text-sm font-medium text-indigo-600">
             GeoVaris Assessment Platform
