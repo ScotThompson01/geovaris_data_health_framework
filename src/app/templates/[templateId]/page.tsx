@@ -9,7 +9,12 @@ import {
 
 import {
   createTemplateVersionAction,
+  publishTemplateVersionAction,
 } from "./actions";
+
+import {
+  PublishVersionButton,
+} from "@/components/templates/PublishVersionButton";
 
 type TemplateDetailPageProps = {
   params: Promise<{
@@ -363,12 +368,34 @@ export default async function TemplateDetailPage({
                         </div>
 
                         {version.versionStatus === "draft" ? (
-                          <Link
-                            href={`/templates/${template.templateId}/versions/${version.versionId}/edit`}
-                            className="rounded-lg bg-brand-purple px-4 py-2 text-sm font-medium text-white hover:bg-brand-purple-dark"
-                          >
-                            Edit Version
-                          </Link>
+                          <div className="flex flex-wrap items-center justify-end gap-3">
+                            <Link
+                              href={`/templates/${template.templateId}/versions/${version.versionId}/edit`}
+                              className="rounded-lg bg-brand-purple px-4 py-2 text-sm font-medium text-white hover:bg-brand-purple-dark"
+                            >
+                              Edit Version
+                            </Link>
+
+                            <form
+                              action={publishTemplateVersionAction}
+                            >
+                              <input
+                                type="hidden"
+                                name="templateId"
+                                value={template.templateId}
+                              />
+
+                              <input
+                                type="hidden"
+                                name="versionId"
+                                value={version.versionId}
+                              />
+
+                              <PublishVersionButton
+                                versionLabel={version.versionLabel}
+                              />
+                            </form>
+                          </div>
                         ) : (
                           <Link
                             href={`/templates/${template.templateId}/versions/${version.versionId}/edit`}
