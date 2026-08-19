@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  and,
   asc,
   desc,
   eq,
@@ -1155,6 +1156,148 @@ export async function getAssessmentTemplateVersionById(
       template.methodologyName,
 
     version,
+  };
+}
+
+// ==================================================
+// Publish Draft Template Version
+// ==================================================
+
+export type PublishDraftTemplateVersionInput = {
+  templateId: string;
+  versionId: string;
+};
+
+export async function publishDraftTemplateVersion(
+  input: PublishDraftTemplateVersionInput,
+) {
+  const editorData =
+    await getAssessmentTemplateVersionById(
+      input.templateId,
+      input.versionId,
+    );
+
+  if (!editorData) {
+    throw new Error(
+      "Template version was not found.",
+    );
+  }
+
+  // -----------------------------------------------
+  // Draft protection
+  // -----------------------------------------------
+
+  if (
+    editorData.version.versionStatus !==
+    "draft"
+  ) {
+    throw new Error(
+      "Only draft template versions can be published.",
+    );
+  }
+
+  // -----------------------------------------------
+  // Basic structural validation
+  // -----------------------------------------------
+
+  if (
+    editorData.version.sections.length === 0
+  ) {
+    throw new Error(
+      "A template version must contain at least one section before it can be published.",
+    );
+  }
+
+  if (
+    editorData.version.questions.length === 0
+  ) {
+    throw new Error(
+      "A template version must contain at least one question before it can be published.",
+    );
+  }
+
+  // -----------------------------------------------
+  // Publish version
+  // -----------------------------------------------
+
+  const now =
+    new Date();
+
+  const [publishedVersion] =
+    await db
+      .update(
+        assessmentTemplateVersions,
+      )
+      .set({
+        status:
+          "published",
+
+        publishedAt:
+          now,
+
+        updatedAt:
+          now,
+      })
+      .where(
+        and(
+          eq(
+            assessmentTemplateVersions.id,
+            input.versionId,
+          ),
+          eq(
+            assessmentTemplateVersions.templateId,
+            input.templateId,
+          ),
+        ),
+      )
+      .returning();
+
+  if (!publishedVersion) {
+    throw new Error(
+      "Template version could not be published.",
+    );
+  }
+
+  // -----------------------------------------------
+  // Activate parent template
+  // -----------------------------------------------
+
+  await db
+    .update(
+      assessmentTemplates,
+    )
+    .set({
+      status:
+        "active",
+
+      updatedAt:
+        now,
+    })
+    .where(
+      eq(
+        assessmentTemplates.id,
+        input.templateId,
+      ),
+    );
+
+  return {
+    templateId:
+      input.templateId,
+
+    versionId:
+      publishedVersion.id,
+
+    versionNumber:
+      publishedVersion.versionNumber,
+
+    versionLabel:
+      publishedVersion.versionLabel,
+
+    versionStatus:
+      publishedVersion.status,
+
+    publishedAt:
+      publishedVersion.publishedAt,
   };
 }
 

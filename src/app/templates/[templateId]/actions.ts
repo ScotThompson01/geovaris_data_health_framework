@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import {
   createTemplateVersionFromExisting,
+  publishDraftTemplateVersion,
 } from "@/db/repositories/template-repository";
 
 export async function createTemplateVersionAction(
@@ -70,4 +71,50 @@ export async function createTemplateVersionAction(
   redirect(
     `/templates/${templateId}`,
   );
+}
+// ==================================================
+// Publish Template Version
+// ==================================================
+
+export async function publishTemplateVersionAction(
+  formData: FormData,
+) {
+  const templateId =
+    formData.get("templateId");
+
+  const versionId =
+    formData.get("versionId");
+
+  if (
+    typeof templateId !== "string" ||
+    !templateId
+  ) {
+    throw new Error(
+      "Template ID is required.",
+    );
+  }
+
+  if (
+    typeof versionId !== "string" ||
+    !versionId
+  ) {
+    throw new Error(
+      "Version ID is required.",
+    );
+  }
+
+  await publishDraftTemplateVersion({
+    templateId,
+    versionId,
+  });
+
+  revalidatePath(
+    `/templates/${templateId}`,
+  );
+
+  revalidatePath(
+    `/templates/${templateId}/versions/${versionId}/edit`,
+  );
+
+  revalidatePath("/templates");
 }
