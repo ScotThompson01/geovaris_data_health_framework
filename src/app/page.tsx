@@ -89,6 +89,13 @@ export default function HomePage() {
               >
                 Create New Assessment
               </Link>
+
+              <Link
+                href="/clients"
+                className="rounded-lg border border-purple-400 bg-slate-950/60 px-7 py-3.5 text-base font-semibold text-white backdrop-blur transition hover:bg-purple-950/70"
+              >
+                Manage Clients
+              </Link>
             </div>
 
             <p className="mt-8 text-lg font-semibold">
