@@ -1,13 +1,27 @@
 import Link from "next/link";
 
 import { AppShell } from "@/components/brand/AppShell";
+
 import {
   getAssessmentCreationOptions,
 } from "@/db/repositories/assessment-repository";
 
-import { createAssessmentAction } from "./actions";
+import {
+  createAssessmentAction,
+} from "./actions";
 
-export default async function NewAssessmentPage() {
+type NewAssessmentPageProps = {
+  searchParams: Promise<{
+    clientId?: string;
+  }>;
+};
+
+export default async function NewAssessmentPage({
+  searchParams,
+}: NewAssessmentPageProps) {
+  const { clientId } =
+    await searchParams;
+
   const options =
     await getAssessmentCreationOptions();
 
@@ -40,6 +54,8 @@ export default async function NewAssessmentPage() {
           className="rounded-xl border border-brand-border bg-brand-surface p-8 shadow-sm"
         >
           <div className="grid gap-6 md:grid-cols-2">
+            {/* Client */}
+
             <div>
               <label
                 htmlFor="clientId"
@@ -52,10 +68,15 @@ export default async function NewAssessmentPage() {
                 id="clientId"
                 name="clientId"
                 required
-                defaultValue=""
+                defaultValue={
+                  clientId ?? ""
+                }
                 className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900"
               >
-                <option value="" disabled>
+                <option
+                  value=""
+                  disabled
+                >
                   Select a client
                 </option>
 
@@ -72,6 +93,8 @@ export default async function NewAssessmentPage() {
               </select>
             </div>
 
+            {/* Assessment Template */}
+
             <div>
               <label
                 htmlFor="templateVersionId"
@@ -87,7 +110,10 @@ export default async function NewAssessmentPage() {
                 defaultValue=""
                 className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900"
               >
-                <option value="" disabled>
+                <option
+                  value=""
+                  disabled
+                >
                   Select an assessment template
                 </option>
 
@@ -114,6 +140,8 @@ export default async function NewAssessmentPage() {
               </select>
             </div>
 
+            {/* Assessment Code */}
+
             <div>
               <label
                 htmlFor="assessmentCode"
@@ -137,6 +165,8 @@ export default async function NewAssessmentPage() {
               </p>
             </div>
 
+            {/* Assessment Name */}
+
             <div>
               <label
                 htmlFor="assessmentName"
@@ -157,6 +187,8 @@ export default async function NewAssessmentPage() {
             </div>
           </div>
 
+          {/* Description */}
+
           <div className="mt-6">
             <label
               htmlFor="description"
@@ -173,6 +205,8 @@ export default async function NewAssessmentPage() {
               className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
             />
           </div>
+
+          {/* Actions */}
 
           <div className="mt-8 flex items-center justify-end gap-4 border-t border-slate-100 pt-6">
             <Link

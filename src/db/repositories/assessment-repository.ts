@@ -528,6 +528,174 @@ export async function getAssessmentSummaries() {
 }
 
 // ==================================================
+// Assessments By Client
+// ==================================================
+
+export async function getAssessmentsByClientId(
+  clientId: string,
+) {
+  const assessmentList = await db
+    .select({
+      assessmentId:
+        assessments.id,
+
+      assessmentCode:
+        assessments.assessmentCode,
+
+      assessmentName:
+        assessments.name,
+
+      assessmentStatus:
+        assessments.status,
+
+      clientName:
+        clients.name,
+
+      frameworkName:
+        frameworks.name,
+
+      templateVersionId:
+        assessments.templateVersionId,
+    })
+    .from(assessments)
+    .innerJoin(
+      clients,
+      eq(
+        clients.id,
+        assessments.clientId,
+      ),
+    )
+    .innerJoin(
+      frameworks,
+      eq(
+        frameworks.id,
+        assessments.frameworkId,
+      ),
+    )
+    .where(
+      eq(
+        assessments.clientId,
+        clientId,
+      ),
+    )
+    .orderBy(
+      asc(
+        assessments.createdAt,
+      ),
+    );
+
+  const summaries = [];
+
+  for (
+    const assessment of assessmentList
+  ) {
+    const questions = await db
+      .select({
+        questionId:
+          templateQuestions.id,
+      })
+      .from(templateQuestions)
+      .innerJoin(
+        templateSections,
+        eq(
+          templateSections.id,
+          templateQuestions.sectionId,
+        ),
+      )
+      .where(
+        eq(
+          templateSections.templateVersionId,
+          assessment.templateVersionId,
+        ),
+      );
+
+    const responses = await db
+      .select({
+        questionId:
+          assessmentResponses.questionId,
+      })
+      .from(assessmentResponses)
+      .where(
+        eq(
+          assessmentResponses.assessmentId,
+          assessment.assessmentId,
+        ),
+      );
+
+    const [overallScore] = await db
+      .select({
+        normalizedScore:
+          assessmentScores.normalizedScore,
+      })
+      .from(assessmentScores)
+      .where(
+        and(
+          eq(
+            assessmentScores.assessmentId,
+            assessment.assessmentId,
+          ),
+          eq(
+            assessmentScores.scoreScope,
+            "overall",
+          ),
+          isNull(
+            assessmentScores.sectionId,
+          ),
+        ),
+      )
+      .limit(1);
+
+    const totalQuestions =
+      questions.length;
+
+    const answeredQuestions =
+      responses.length;
+
+    const completionPercent =
+      totalQuestions === 0
+        ? 0
+        : Math.round(
+          (
+            answeredQuestions /
+            totalQuestions
+          ) * 100,
+        );
+
+    summaries.push({
+      assessmentId:
+        assessment.assessmentId,
+
+      assessmentCode:
+        assessment.assessmentCode,
+
+      assessmentName:
+        assessment.assessmentName,
+
+      assessmentStatus:
+        assessment.assessmentStatus,
+
+      clientName:
+        assessment.clientName,
+
+      frameworkName:
+        assessment.frameworkName,
+
+      totalQuestions,
+
+      answeredQuestions,
+
+      completionPercent,
+
+      normalizedScore:
+        overallScore?.normalizedScore ??
+        null,
+    });
+  }
+
+  return summaries;
+}
+
+// ==================================================
 // Assessment Results
 // ==================================================
 
