@@ -185,12 +185,31 @@ export default async function ClientDetailPage({
             </p>
           </div>
 
-          <Link
-            href={`/assessments/new?clientId=${client.clientId}`}
-            className="rounded-lg bg-brand-purple px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-purple-dark"
-          >
-            Create Assessment
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/clients/${client.clientId}/edit`}
+              className="rounded-lg border border-brand-border px-5 py-2.5 text-sm font-medium text-brand-text hover:bg-slate-50"
+            >
+              Edit Client
+            </Link>
+
+            {client.status === "active" ? (
+              <Link
+                href={`/assessments/new?clientId=${client.clientId}`}
+                className="rounded-lg bg-brand-purple px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-purple-dark"
+              >
+                Create Assessment
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="cursor-not-allowed rounded-lg bg-slate-200 px-5 py-2.5 text-sm font-medium text-slate-500"
+              >
+                Create Assessment
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Client Details */}
@@ -317,7 +336,7 @@ export default async function ClientDetailPage({
                 No completed assessment is
                 available yet. Complete an
                 assessment to establish this
-                this client&apos;s Data Health baseline.
+                client&apos;s Data Health baseline.
               </p>
             </div>
           ) : (
@@ -562,6 +581,6 @@ export default async function ClientDetailPage({
           )}
         </section>
       </div>
-    </AppShell>
+    </AppShell >
   );
 }

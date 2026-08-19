@@ -1105,15 +1105,21 @@ export async function createAssessment(
     description?: string | null;
   },
 ) {
+
   // --------------------------------------------------
   // Resolve Client
   // --------------------------------------------------
 
   const [client] = await db
     .select({
-      id: clients.id,
+      id:
+        clients.id,
+
       organizationId:
         clients.organizationId,
+
+      status:
+        clients.status,
     })
     .from(clients)
     .where(
@@ -1129,6 +1135,13 @@ export async function createAssessment(
       "Selected client was not found.",
     );
   }
+
+  if (client.status !== "active") {
+    throw new Error(
+      "New assessments cannot be created for an inactive client.",
+    );
+  }
+
 
   // --------------------------------------------------
   // Resolve Template / Methodology / Framework

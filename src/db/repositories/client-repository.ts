@@ -195,3 +195,88 @@ export async function createClient(
 
   return client;
 }
+// ==================================================
+// Update Client
+// ==================================================
+
+export async function updateClient(
+  input: {
+    clientId: string;
+    name: string;
+    legalName?: string | null;
+    industry?: string | null;
+    status: string;
+    description?: string | null;
+  },
+) {
+  const clientName =
+    input.name.trim();
+
+  if (!clientName) {
+    throw new Error(
+      "Client name is required.",
+    );
+  }
+
+  const [existingClient] =
+    await db
+      .select({
+        id:
+          clients.id,
+      })
+      .from(clients)
+      .where(
+        eq(
+          clients.id,
+          input.clientId,
+        ),
+      )
+      .limit(1);
+
+  if (!existingClient) {
+    throw new Error(
+      "Client was not found.",
+    );
+  }
+
+  const [updatedClient] =
+    await db
+      .update(clients)
+      .set({
+        name:
+          clientName,
+
+        legalName:
+          input.legalName?.trim() ||
+          null,
+
+        industry:
+          input.industry?.trim() ||
+          null,
+
+        status:
+          input.status,
+
+        description:
+          input.description?.trim() ||
+          null,
+
+        updatedAt:
+          new Date(),
+      })
+      .where(
+        eq(
+          clients.id,
+          input.clientId,
+        ),
+      )
+      .returning();
+
+  if (!updatedClient) {
+    throw new Error(
+      "Client could not be updated.",
+    );
+  }
+
+  return updatedClient;
+}
