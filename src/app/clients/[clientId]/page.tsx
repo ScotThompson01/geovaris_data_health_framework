@@ -8,8 +8,10 @@ import {
 } from "@/db/repositories/client-repository";
 
 import {
+  getAssessmentResultsByCode,
   getAssessmentsByClientId,
 } from "@/db/repositories/assessment-repository";
+
 
 type ClientDetailPageProps = {
   params: Promise<{
@@ -89,6 +91,53 @@ export default async function ClientDetailPage({
       client.clientId,
     );
 
+  const completedAssessments =
+    clientAssessments.filter(
+      (assessment) =>
+        assessment.assessmentStatus ===
+        "completed",
+    );
+
+  const latestCompletedAssessment =
+    completedAssessments.length > 0
+      ? completedAssessments[
+      completedAssessments.length - 1
+      ]
+      : null;
+
+  const latestResults =
+    latestCompletedAssessment
+      ? await getAssessmentResultsByCode(
+        latestCompletedAssessment.assessmentCode,
+      )
+      : null;
+
+  const latestSectionScores =
+    latestResults
+      ? latestResults.sectionScores.map(
+        (sectionScore) => {
+          const matchingResponse =
+            latestResults.responses.find(
+              (response) =>
+                response.sectionId ===
+                sectionScore.sectionId,
+            );
+
+          return {
+            sectionId:
+              sectionScore.sectionId,
+
+            sectionName:
+              matchingResponse?.sectionName ??
+              "Assessment Section",
+
+            normalizedScore:
+              sectionScore.normalizedScore,
+          };
+        },
+      )
+      : [];
+
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-6xl px-6 py-10">
@@ -119,7 +168,7 @@ export default async function ClientDetailPage({
               <span
                 className={
                   client.status ===
-                  "active"
+                    "active"
                     ? "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
                     : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
                 }
@@ -231,6 +280,118 @@ export default async function ClientDetailPage({
           </div>
         </section>
 
+        {/* Data Health Snapshot */}
+
+        <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-6">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-purple">
+                Data Health
+              </p>
+
+              <h2 className="mt-2 text-xl font-bold text-brand-text">
+                Latest Data Health Snapshot
+              </h2>
+
+              <p className="mt-2 text-sm text-brand-muted">
+                Latest completed assessment
+                results for this client.
+              </p>
+            </div>
+
+            {latestCompletedAssessment &&
+              latestResults && (
+                <Link
+                  href={`/assessments/${latestCompletedAssessment.assessmentCode}/results`}
+                  className="text-sm font-medium text-brand-purple hover:text-brand-purple-dark"
+                >
+                  View Full Results →
+                </Link>
+              )}
+          </div>
+
+          {!latestCompletedAssessment ||
+            !latestResults ? (
+            <div className="mt-6 rounded-xl border border-dashed border-brand-border p-6">
+              <p className="text-sm text-brand-muted">
+                No completed assessment is
+                available yet. Complete an
+                assessment to establish this
+                this client&apos;s Data Health baseline.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="mt-6 grid gap-4 md:grid-cols-[1.5fr_1fr]">
+                <div className="rounded-xl bg-slate-50 p-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                    Latest Assessment
+                  </p>
+
+                  <p className="mt-2 font-semibold text-brand-text">
+                    {
+                      latestCompletedAssessment.assessmentName
+                    }
+                  </p>
+
+                  <p className="mt-1 text-xs text-brand-muted">
+                    {
+                      latestCompletedAssessment.assessmentCode
+                    }
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                    Overall Data Health
+                  </p>
+
+                  <p className="mt-2 text-3xl font-bold text-brand-purple">
+                    {formatScore(
+                      latestResults.overallScore
+                        ?.normalizedScore ?? null,
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {latestSectionScores.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-sm font-semibold text-brand-text">
+                    Section Scores
+                  </h3>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {latestSectionScores.map(
+                      (section) => (
+                        <div
+                          key={
+                            section.sectionId ??
+                            section.sectionName
+                          }
+                          className="rounded-xl border border-brand-border p-4"
+                        >
+                          <p className="text-sm text-brand-muted">
+                            {
+                              section.sectionName
+                            }
+                          </p>
+
+                          <p className="mt-2 text-2xl font-bold text-brand-text">
+                            {formatScore(
+                              section.normalizedScore,
+                            )}
+                          </p>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
         {/* Assessments */}
 
         <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
@@ -241,8 +402,8 @@ export default async function ClientDetailPage({
               </h2>
 
               <p className="mt-2 text-sm text-brand-muted">
-                Assessment history and
-                progress for this client.
+                Assessment history and progress
+                for this client.
               </p>
             </div>
 
@@ -254,8 +415,7 @@ export default async function ClientDetailPage({
             </span>
           </div>
 
-          {clientAssessments.length ===
-          0 ? (
+          {clientAssessments.length === 0 ? (
             <div className="mt-6 rounded-xl border border-dashed border-brand-border p-6">
               <p className="text-sm text-brand-muted">
                 No assessments have been
@@ -270,86 +430,133 @@ export default async function ClientDetailPage({
               </Link>
             </div>
           ) : (
-            <div className="mt-6 overflow-hidden rounded-xl border border-brand-border">
-              <div className="grid grid-cols-[1.5fr_1fr_120px_120px_120px] gap-4 border-b border-brand-border bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                <span>
-                  Assessment
-                </span>
-
-                <span>
-                  Framework
-                </span>
-
-                <span>
-                  Status
-                </span>
-
-                <span>
-                  Progress
-                </span>
-
-                <span>
-                  Score
-                </span>
-              </div>
-
+            <div className="mt-6 space-y-4">
               {clientAssessments.map(
-                (assessment) => (
-                  <Link
-                    key={
-                      assessment.assessmentId
-                    }
-                    href={`/assessments/${assessment.assessmentCode}`}
-                    className="grid grid-cols-[1.5fr_1fr_120px_120px_120px] gap-4 border-b border-brand-border px-4 py-4 last:border-b-0 hover:bg-slate-50"
-                  >
-                    <div>
-                      <p className="font-medium text-brand-text">
-                        {
-                          assessment.assessmentName
-                        }
-                      </p>
+                (assessment) => {
+                  const isCompleted =
+                    assessment.assessmentStatus ===
+                    "completed";
 
-                      <p className="mt-1 text-xs text-brand-muted">
-                        {
-                          assessment.assessmentCode
-                        }
-                      </p>
+                  return (
+                    <div
+                      key={
+                        assessment.assessmentId
+                      }
+                      className="rounded-xl border border-brand-border p-5"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-6">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <h3 className="font-semibold text-brand-text">
+                              {
+                                assessment.assessmentName
+                              }
+                            </h3>
+
+                            <span
+                              className={
+                                isCompleted
+                                  ? "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+                                  : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
+                              }
+                            >
+                              {formatStatus(
+                                assessment.assessmentStatus,
+                              )}
+                            </span>
+                          </div>
+
+                          <p className="mt-1 text-xs text-brand-muted">
+                            {
+                              assessment.assessmentCode
+                            }
+                          </p>
+
+                          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                                Framework
+                              </p>
+
+                              <p className="mt-1 text-sm text-brand-text">
+                                {
+                                  assessment.frameworkName
+                                }
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                                Progress
+                              </p>
+
+                              <p className="mt-1 text-sm text-brand-text">
+                                {
+                                  assessment.answeredQuestions
+                                }
+                                /
+                                {
+                                  assessment.totalQuestions
+                                }
+                                {" · "}
+                                {
+                                  assessment.completionPercent
+                                }
+                                %
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                                Overall Score
+                              </p>
+
+                              <p className="mt-1 text-sm font-semibold text-brand-text">
+                                {formatScore(
+                                  assessment.normalizedScore,
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          {isCompleted ? (
+                            <>
+                              <Link
+                                href={`/assessments/${assessment.assessmentCode}/results`}
+                                className="rounded-lg bg-brand-purple px-4 py-2 text-sm font-medium text-white hover:bg-brand-purple-dark"
+                              >
+                                View Results
+                              </Link>
+
+                              <Link
+                                href={`/assessments/${assessment.assessmentCode}/scorecard`}
+                                className="rounded-lg border border-brand-border px-4 py-2 text-sm font-medium text-brand-text hover:bg-slate-50"
+                              >
+                                Scorecard
+                              </Link>
+
+                              <Link
+                                href={`/assessments/${assessment.assessmentCode}/report`}
+                                className="rounded-lg border border-brand-border px-4 py-2 text-sm font-medium text-brand-text hover:bg-slate-50"
+                              >
+                                Report
+                              </Link>
+                            </>
+                          ) : (
+                            <Link
+                              href={`/assessments/${assessment.assessmentCode}`}
+                              className="rounded-lg bg-brand-purple px-4 py-2 text-sm font-medium text-white hover:bg-brand-purple-dark"
+                            >
+                              Continue Assessment
+                            </Link>
+                          )}
+                        </div>
+                      </div>
                     </div>
-
-                    <p className="text-sm text-brand-muted">
-                      {
-                        assessment.frameworkName
-                      }
-                    </p>
-
-                    <p className="text-sm text-brand-muted">
-                      {formatStatus(
-                        assessment.assessmentStatus,
-                      )}
-                    </p>
-
-                    <p className="text-sm text-brand-muted">
-                      {
-                        assessment.answeredQuestions
-                      }
-                      /
-                      {
-                        assessment.totalQuestions
-                      }
-                      {" · "}
-                      {
-                        assessment.completionPercent
-                      }
-                      %
-                    </p>
-
-                    <p className="text-sm font-semibold text-brand-text">
-                      {formatScore(
-                        assessment.normalizedScore,
-                      )}
-                    </p>
-                  </Link>
-                ),
+                  );
+                },
               )}
             </div>
           )}
