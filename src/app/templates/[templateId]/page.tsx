@@ -5,6 +5,7 @@ import { AppShell } from "@/components/brand/AppShell";
 
 import {
   getAssessmentTemplateById,
+  validateTemplateVersion,
 } from "@/db/repositories/template-repository";
 
 import {
@@ -73,253 +74,287 @@ export default async function TemplateDetailPage({
     notFound();
   }
 
-  return (
-    <AppShell>
-      <div className="mx-auto w-full max-w-6xl px-6 py-10">
-        {/* Navigation */}
+  const validationResults =
+    await Promise.all(
+      template.versions.map(
+        async (version) => ({
+          versionId:
+            version.versionId,
 
-        <div className="mb-6">
-          <Link
-            href="/templates"
-            className="text-sm font-medium text-brand-purple hover:text-brand-purple-dark"
-          >
-            ← Back to Assessment Templates
-          </Link>
+          validation:
+            version.versionStatus === "draft"
+              ? await validateTemplateVersion(
+                template.templateId,
+                version.versionId,
+              )
+              : null,
+        }),
+      ),
+    );
+
+  const validationByVersion =
+    new Map(
+      validationResults.map(
+        (item) => [
+          item.versionId,
+          item.validation,
+        ],
+      ),
+    );
+
+return (
+  <AppShell>
+    <div className="mx-auto w-full max-w-6xl px-6 py-10">
+      {/* Navigation */}
+
+      <div className="mb-6">
+        <Link
+          href="/templates"
+          className="text-sm font-medium text-brand-purple hover:text-brand-purple-dark"
+        >
+          ← Back to Assessment Templates
+        </Link>
+      </div>
+
+      {/* Template Header */}
+
+      <section className="rounded-2xl border border-brand-border bg-white p-7 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div className="max-w-3xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-purple">
+              Assessment Template
+            </p>
+
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <h1 className="text-3xl font-bold text-brand-text">
+                {template.templateName}
+              </h1>
+
+              <span className="rounded-full bg-brand-blue-light px-3 py-1 text-xs font-semibold text-brand-purple-dark">
+                {formatStatus(
+                  template.templateStatus,
+                )}
+              </span>
+            </div>
+
+            {template.description && (
+              <p className="mt-4 max-w-3xl leading-7 text-brand-muted">
+                {template.description}
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Template Header */}
+        {/* Template Metadata */}
 
-        <section className="rounded-2xl border border-brand-border bg-white p-7 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-6">
-            <div className="max-w-3xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-purple">
-                Assessment Template
-              </p>
-
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <h1 className="text-3xl font-bold text-brand-text">
-                  {template.templateName}
-                </h1>
-
-                <span className="rounded-full bg-brand-blue-light px-3 py-1 text-xs font-semibold text-brand-purple-dark">
-                  {formatStatus(
-                    template.templateStatus,
-                  )}
-                </span>
-              </div>
-
-              {template.description && (
-                <p className="mt-4 max-w-3xl leading-7 text-brand-muted">
-                  {template.description}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Template Metadata */}
-
-          <div className="mt-7 grid gap-6 border-t border-brand-border pt-6 md:grid-cols-4">
-            <div>
-              <p className="text-sm text-brand-muted">
-                Framework
-              </p>
-
-              <p className="mt-1 font-medium text-brand-text">
-                {template.frameworkName}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm text-brand-muted">
-                Methodology
-              </p>
-
-              <p className="mt-1 font-medium text-brand-text">
-                {template.methodologyName}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm text-brand-muted">
-                Scope
-              </p>
-
-              <p className="mt-1 font-medium text-brand-text">
-                {formatStatus(
-                  template.templateScope,
-                )}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm text-brand-muted">
-                Last Updated
-              </p>
-
-              <p className="mt-1 font-medium text-brand-text">
-                {formatDate(
-                  template.updatedAt,
-                )}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Create New Version */}
-
-        <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
-          <div className="mb-5">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-purple">
-              Template Management
-            </p>
-
-            <h2 className="mt-2 text-xl font-bold text-brand-text">
-              Create New Version
-            </h2>
-
-            <p className="mt-2 text-sm text-brand-muted">
-              Create a new draft by copying an existing
-              template version. The published source
-              version will remain unchanged.
-            </p>
-          </div>
-
-          {template.versions.length > 0 ? (
-            <form
-              action={createTemplateVersionAction}
-              className="grid gap-5 md:grid-cols-2"
-            >
-              <input
-                type="hidden"
-                name="templateId"
-                value={template.templateId}
-              />
-
-              <div>
-                <label
-                  htmlFor="sourceVersionId"
-                  className="block text-sm font-medium text-brand-text"
-                >
-                  Copy From
-                </label>
-
-                <select
-                  id="sourceVersionId"
-                  name="sourceVersionId"
-                  required
-                  defaultValue={
-                    template.versions[
-                      template.versions.length - 1
-                    ].versionId
-                  }
-                  className="mt-2 w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 text-brand-text"
-                >
-                  {template.versions.map(
-                    (version) => (
-                      <option
-                        key={version.versionId}
-                        value={version.versionId}
-                      >
-                        Version{" "}
-                        {version.versionLabel}
-                        {" — "}
-                        {formatStatus(
-                          version.versionStatus,
-                        )}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="versionLabel"
-                  className="block text-sm font-medium text-brand-text"
-                >
-                  New Version Label
-                </label>
-
-                <input
-                  id="versionLabel"
-                  name="versionLabel"
-                  type="text"
-                  required
-                  maxLength={30}
-                  placeholder="1.2"
-                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label
-                  htmlFor="changeSummary"
-                  className="block text-sm font-medium text-brand-text"
-                >
-                  Change Summary
-                </label>
-
-                <textarea
-                  id="changeSummary"
-                  name="changeSummary"
-                  rows={3}
-                  placeholder="Describe the changes planned for this version."
-                  className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
-                />
-              </div>
-
-              <div className="md:col-span-2 flex justify-end">
-                <button
-                  type="submit"
-                  className="rounded-lg bg-brand-purple px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-purple-dark"
-                >
-                  Create Draft Version
-                </button>
-              </div>
-            </form>
-          ) : (
+        <div className="mt-7 grid gap-6 border-t border-brand-border pt-6 md:grid-cols-4">
+          <div>
             <p className="text-sm text-brand-muted">
-              A source version is required before a
-              new version can be created.
-            </p>
-          )}
-        </section>
-
-        {/* Versions */}
-
-        <section className="mt-8">
-          <div className="mb-5">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-purple">
-              Version Control
+              Framework
             </p>
 
-            <h2 className="mt-2 text-2xl font-bold text-brand-text">
-              Template Versions
-            </h2>
+            <p className="mt-1 font-medium text-brand-text">
+              {template.frameworkName}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm text-brand-muted">
+              Methodology
+            </p>
+
+            <p className="mt-1 font-medium text-brand-text">
+              {template.methodologyName}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm text-brand-muted">
+              Scope
+            </p>
+
+            <p className="mt-1 font-medium text-brand-text">
+              {formatStatus(
+                template.templateScope,
+              )}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm text-brand-muted">
+              Last Updated
+            </p>
+
+            <p className="mt-1 font-medium text-brand-text">
+              {formatDate(
+                template.updatedAt,
+              )}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Create New Version */}
+
+      <section className="mt-8 rounded-2xl border border-brand-border bg-white p-6 shadow-sm">
+        <div className="mb-5">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-purple">
+            Template Management
+          </p>
+
+          <h2 className="mt-2 text-xl font-bold text-brand-text">
+            Create New Version
+          </h2>
+
+          <p className="mt-2 text-sm text-brand-muted">
+            Create a new draft by copying an existing
+            template version. The published source
+            version will remain unchanged.
+          </p>
+        </div>
+
+        {template.versions.length > 0 ? (
+          <form
+            action={createTemplateVersionAction}
+            className="grid gap-5 md:grid-cols-2"
+          >
+            <input
+              type="hidden"
+              name="templateId"
+              value={template.templateId}
+            />
+
+            <div>
+              <label
+                htmlFor="sourceVersionId"
+                className="block text-sm font-medium text-brand-text"
+              >
+                Copy From
+              </label>
+
+              <select
+                id="sourceVersionId"
+                name="sourceVersionId"
+                required
+                defaultValue={
+                  template.versions[
+                    template.versions.length - 1
+                  ].versionId
+                }
+                className="mt-2 w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 text-brand-text"
+              >
+                {template.versions.map(
+                  (version) => (
+                    <option
+                      key={version.versionId}
+                      value={version.versionId}
+                    >
+                      Version{" "}
+                      {version.versionLabel}
+                      {" — "}
+                      {formatStatus(
+                        version.versionStatus,
+                      )}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="versionLabel"
+                className="block text-sm font-medium text-brand-text"
+              >
+                New Version Label
+              </label>
+
+              <input
+                id="versionLabel"
+                name="versionLabel"
+                type="text"
+                required
+                maxLength={30}
+                placeholder="1.2"
+                className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label
+                htmlFor="changeSummary"
+                className="block text-sm font-medium text-brand-text"
+              >
+                Change Summary
+              </label>
+
+              <textarea
+                id="changeSummary"
+                name="changeSummary"
+                rows={3}
+                placeholder="Describe the changes planned for this version."
+                className="mt-2 w-full rounded-lg border border-brand-border px-3 py-2.5 text-brand-text"
+              />
+            </div>
+
+            <div className="md:col-span-2 flex justify-end">
+              <button
+                type="submit"
+                className="rounded-lg bg-brand-purple px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-purple-dark"
+              >
+                Create Draft Version
+              </button>
+            </div>
+          </form>
+        ) : (
+          <p className="text-sm text-brand-muted">
+            A source version is required before a
+            new version can be created.
+          </p>
+        )}
+      </section>
+
+      {/* Versions */}
+
+      <section className="mt-8">
+        <div className="mb-5">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-purple">
+            Version Control
+          </p>
+
+          <h2 className="mt-2 text-2xl font-bold text-brand-text">
+            Template Versions
+          </h2>
+
+          <p className="mt-2 text-brand-muted">
+            Review the version history, sections,
+            questions, answer options, scoring,
+            and publication status for this
+            assessment template.
+          </p>
+        </div>
+
+        {template.versions.length === 0 ? (
+          <div className="rounded-xl border border-brand-border bg-white p-8 shadow-sm">
+            <h3 className="font-semibold text-brand-text">
+              No versions found
+            </h3>
 
             <p className="mt-2 text-brand-muted">
-              Review the version history, sections,
-              questions, answer options, scoring,
-              and publication status for this
-              assessment template.
+              This template does not currently
+              contain any versions.
             </p>
           </div>
+        ) : (
+          <div className="space-y-5">
+            {template.versions.map(
+              (version) => {
+                const validation =
+                  validationByVersion.get(
+                    version.versionId,
+                  );
 
-          {template.versions.length === 0 ? (
-            <div className="rounded-xl border border-brand-border bg-white p-8 shadow-sm">
-              <h3 className="font-semibold text-brand-text">
-                No versions found
-              </h3>
-
-              <p className="mt-2 text-brand-muted">
-                This template does not currently
-                contain any versions.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {template.versions.map(
-                (version) => (
+                return (
                   <article
                     key={version.versionId}
                     className="rounded-2xl border border-brand-border bg-white p-6 shadow-sm"
@@ -376,25 +411,35 @@ export default async function TemplateDetailPage({
                               Edit Version
                             </Link>
 
-                            <form
-                              action={publishTemplateVersionAction}
-                            >
-                              <input
-                                type="hidden"
-                                name="templateId"
-                                value={template.templateId}
-                              />
+                            {validation?.isValid ? (
+                              <form
+                                action={publishTemplateVersionAction}
+                              >
+                                <input
+                                  type="hidden"
+                                  name="templateId"
+                                  value={template.templateId}
+                                />
 
-                              <input
-                                type="hidden"
-                                name="versionId"
-                                value={version.versionId}
-                              />
+                                <input
+                                  type="hidden"
+                                  name="versionId"
+                                  value={version.versionId}
+                                />
 
-                              <PublishVersionButton
-                                versionLabel={version.versionLabel}
-                              />
-                            </form>
+                                <PublishVersionButton
+                                  versionLabel={version.versionLabel}
+                                />
+                              </form>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled
+                                className="cursor-not-allowed rounded-lg border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-400"
+                              >
+                                Publish Version
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <Link
@@ -440,6 +485,103 @@ export default async function TemplateDetailPage({
                         </p>
                       </div>
                     </div>
+
+                    {version.versionStatus === "draft" &&
+                      validation && (
+                        <div
+                          className={
+                            validation.isValid
+                              ? "mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5"
+                              : "mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5"
+                          }
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div>
+                              <h4
+                                className={
+                                  validation.isValid
+                                    ? "font-semibold text-emerald-900"
+                                    : "font-semibold text-amber-900"
+                                }
+                              >
+                                {validation.isValid
+                                  ? "Ready to Publish"
+                                  : "Validation Issues Found"}
+                              </h4>
+
+                              <p
+                                className={
+                                  validation.isValid
+                                    ? "mt-1 text-sm text-emerald-800"
+                                    : "mt-1 text-sm text-amber-800"
+                                }
+                              >
+                                {validation.errors.length}{" "}
+                                {validation.errors.length === 1
+                                  ? "error"
+                                  : "errors"}
+                                {" · "}
+                                {validation.warnings.length}{" "}
+                                {validation.warnings.length === 1
+                                  ? "warning"
+                                  : "warnings"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {validation.errors.length > 0 && (
+                            <div className="mt-4">
+                              <p className="text-sm font-semibold text-amber-900">
+                                Errors
+                              </p>
+
+                              <ul className="mt-2 space-y-2">
+                                {validation.errors.map(
+                                  (issue) => (
+                                    <li
+                                      key={`${issue.code}-${issue.message}`}
+                                      className="text-sm text-amber-800"
+                                    >
+                                      • {issue.message}
+                                    </li>
+                                  ),
+                                )}
+                              </ul>
+                            </div>
+                          )}
+
+                          {validation.warnings.length > 0 && (
+                            <div className="mt-4">
+                              <p
+                                className={
+                                  validation.isValid
+                                    ? "text-sm font-semibold text-emerald-900"
+                                    : "text-sm font-semibold text-amber-900"
+                                }
+                              >
+                                Warnings
+                              </p>
+
+                              <ul className="mt-2 space-y-2">
+                                {validation.warnings.map(
+                                  (issue) => (
+                                    <li
+                                      key={`${issue.code}-${issue.message}`}
+                                      className={
+                                        validation.isValid
+                                          ? "text-sm text-emerald-800"
+                                          : "text-sm text-amber-800"
+                                      }
+                                    >
+                                      • {issue.message}
+                                    </li>
+                                  ),
+                                )}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                     {/* Sections */}
 
@@ -661,12 +803,13 @@ export default async function TemplateDetailPage({
                       )}
                     </div>
                   </article>
-                ),
-              )}
-            </div>
-          )}
-        </section>
-      </div>
-    </AppShell>
-  );
+                );
+              },
+            )}
+          </div>
+        )}
+      </section>
+    </div>
+  </AppShell>
+);
 }
