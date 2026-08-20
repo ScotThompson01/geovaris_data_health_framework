@@ -12,6 +12,14 @@ import {
   getAssessmentsByClientId,
 } from "@/db/repositories/assessment-repository";
 
+import {
+  DeleteClientButton,
+} from "@/components/clients/DeleteClientButton";
+
+import {
+  deleteClientAction,
+} from "./actions";
+
 
 type ClientDetailPageProps = {
   params: Promise<{
@@ -186,6 +194,23 @@ export default async function ClientDetailPage({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {clientAssessments.length === 0 && (
+              <form
+                action={deleteClientAction}
+              >
+                <input
+                  type="hidden"
+                  name="clientId"
+                  value={client.clientId}
+                />
+
+                <DeleteClientButton
+                  clientName={
+                    client.clientName
+                  }
+                />
+              </form>
+            )}
             <Link
               href={`/clients/${client.clientId}/edit`}
               className="rounded-lg border border-brand-border px-5 py-2.5 text-sm font-medium text-brand-text hover:bg-slate-50"
@@ -456,6 +481,14 @@ export default async function ClientDetailPage({
                     assessment.assessmentStatus ===
                     "completed";
 
+                  const isArchived =
+                    assessment.assessmentStatus ===
+                    "archived";
+
+                  const isHistorical =
+                    isCompleted ||
+                    isArchived;
+
                   return (
                     <div
                       key={
@@ -476,7 +509,9 @@ export default async function ClientDetailPage({
                               className={
                                 isCompleted
                                   ? "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
-                                  : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
+                                  : isArchived
+                                    ? "rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700"
+                                    : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
                               }
                             >
                               {formatStatus(
@@ -540,7 +575,7 @@ export default async function ClientDetailPage({
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
-                          {isCompleted ? (
+                          {isHistorical ? (
                             <>
                               <Link
                                 href={`/assessments/${assessment.assessmentCode}/results`}

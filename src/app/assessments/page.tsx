@@ -1,9 +1,33 @@
 import Link from "next/link";
 
 import { AppShell } from "@/components/brand/AppShell";
-import { getAssessmentSummaries } from "@/db/repositories/assessment-repository";
 
-function formatStatus(status: string) {
+import {
+  ArchiveAssessmentButton,
+} from "@/components/assessments/ArchiveAssessmentButton";
+
+import {
+  DeleteAssessmentButton,
+} from "@/components/assessments/DeleteAssessmentButton";
+
+import {
+  getAssessmentSummaries,
+} from "@/db/repositories/assessment-repository";
+
+import {
+  archiveCompletedAssessmentAction,
+  deleteDraftAssessmentAction,
+} from "./actions";
+
+type AssessmentsPageProps = {
+  searchParams: Promise<{
+    status?: string;
+  }>;
+};
+
+function formatStatus(
+  status: string,
+) {
   return status
     .split("_")
     .map(
@@ -21,24 +45,57 @@ function formatScore(
     return "—";
   }
 
-  const numericScore = Number(score);
+  const numericScore =
+    Number(score);
 
-  if (Number.isNaN(numericScore)) {
+  if (
+    Number.isNaN(
+      numericScore,
+    )
+  ) {
     return "—";
   }
 
-  return `${Math.round(numericScore)}%`;
+  return `${Math.round(
+    numericScore,
+  )}%`;
 }
 
-export default async function AssessmentsPage() {
+export default async function AssessmentsPage({
+  searchParams,
+}: AssessmentsPageProps) {
+  const { status } =
+    await searchParams;
+
   const assessments =
     await getAssessmentSummaries();
+
+  const validStatuses = [
+    "draft",
+    "completed",
+    "archived",
+  ];
+
+  const selectedStatus =
+    status &&
+    validStatuses.includes(
+      status,
+    )
+      ? status
+      : "all";
+
+  const filteredAssessments =
+    selectedStatus === "all"
+      ? assessments
+      : assessments.filter(
+          (assessment) =>
+            assessment.assessmentStatus ===
+            selectedStatus,
+        );
 
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-7xl px-6 py-10">
-        {/* Header */}
-
         {/* Navigation */}
 
         <div className="mb-6">
@@ -49,6 +106,8 @@ export default async function AssessmentsPage() {
             ← Back to Home
           </Link>
         </div>
+
+        {/* Header */}
 
         <div className="mb-8">
           <p className="text-sm font-medium text-indigo-600">
@@ -69,27 +128,81 @@ export default async function AssessmentsPage() {
           </div>
 
           <p className="mt-2 text-slate-600">
-            View assessment progress, scores, and
-            current status.
+            View assessment progress, scores,
+            and current status.
           </p>
+
+          {/* Status Filter */}
+
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Link
+              href="/assessments"
+              className={
+                selectedStatus === "all"
+                  ? "rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
+                  : "rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              }
+            >
+              All
+            </Link>
+
+            <Link
+              href="/assessments?status=draft"
+              className={
+                selectedStatus === "draft"
+                  ? "rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
+                  : "rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              }
+            >
+              Draft
+            </Link>
+
+            <Link
+              href="/assessments?status=completed"
+              className={
+                selectedStatus ===
+                "completed"
+                  ? "rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
+                  : "rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              }
+            >
+              Completed
+            </Link>
+
+            <Link
+              href="/assessments?status=archived"
+              className={
+                selectedStatus ===
+                "archived"
+                  ? "rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
+                  : "rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              }
+            >
+              Archived
+            </Link>
+          </div>
         </div>
 
         {/* Empty State */}
 
-        {assessments.length === 0 ? (
+        {filteredAssessments.length ===
+        0 ? (
           <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900">
               No assessments found
             </h2>
 
             <p className="mt-2 text-slate-600">
-              There are currently no assessments
-              available.
+              {selectedStatus === "all"
+                ? "There are currently no assessments available."
+                : `There are currently no ${formatStatus(
+                    selectedStatus,
+                  ).toLowerCase()} assessments.`}
             </p>
           </div>
         ) : (
           <div className="grid gap-6">
-            {assessments.map(
+            {filteredAssessments.map(
               (assessment) => (
                 <article
                   key={
@@ -114,7 +227,17 @@ export default async function AssessmentsPage() {
                       </h2>
                     </div>
 
-                    <span className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700">
+                    <span
+                      className={
+                        assessment.assessmentStatus ===
+                        "completed"
+                          ? "rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700"
+                          : assessment.assessmentStatus ===
+                              "archived"
+                            ? "rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700"
+                            : "rounded-full bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700"
+                      }
+                    >
                       {formatStatus(
                         assessment.assessmentStatus,
                       )}
@@ -200,15 +323,87 @@ export default async function AssessmentsPage() {
                     </div>
                   </div>
 
-                  {/* Action */}
+                  {/* Actions */}
 
-                  <div className="mt-8 flex justify-end">
-                    <Link
-                      href={`/assessments/${assessment.assessmentCode}`}
-                      className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
-                    >
-                      Open Assessment
-                    </Link>
+                  <div className="mt-8 flex flex-wrap justify-end gap-3">
+                    {assessment.assessmentStatus ===
+                      "draft" && (
+                      <form
+                        action={
+                          deleteDraftAssessmentAction
+                        }
+                      >
+                        <input
+                          type="hidden"
+                          name="assessmentId"
+                          value={
+                            assessment.assessmentId
+                          }
+                        />
+
+                        <DeleteAssessmentButton
+                          assessmentName={
+                            assessment.assessmentName
+                          }
+                        />
+                      </form>
+                    )}
+
+                    {assessment.assessmentStatus ===
+                      "completed" && (
+                      <form
+                        action={
+                          archiveCompletedAssessmentAction
+                        }
+                      >
+                        <input
+                          type="hidden"
+                          name="assessmentId"
+                          value={
+                            assessment.assessmentId
+                          }
+                        />
+
+                        <ArchiveAssessmentButton
+                          assessmentName={
+                            assessment.assessmentName
+                          }
+                        />
+                      </form>
+                    )}
+
+                    {assessment.assessmentStatus ===
+                    "draft" ? (
+                      <Link
+                        href={`/assessments/${assessment.assessmentCode}`}
+                        className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+                      >
+                        Open Assessment
+                      </Link>
+                    ) : (
+                      <>
+                        <Link
+                          href={`/assessments/${assessment.assessmentCode}/results`}
+                          className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+                        >
+                          View Results
+                        </Link>
+
+                        <Link
+                          href={`/assessments/${assessment.assessmentCode}/scorecard`}
+                          className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          Scorecard
+                        </Link>
+
+                        <Link
+                          href={`/assessments/${assessment.assessmentCode}/report`}
+                          className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          Report
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </article>
               ),

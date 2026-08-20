@@ -1,7 +1,12 @@
-import { asc, eq } from "drizzle-orm";
+import {
+  asc,
+  count,
+  eq,
+} from "drizzle-orm";
 
 import { db } from "@/db/client";
 import {
+  assessments,
   clients,
   organizations,
 } from "@/db/schema";
@@ -279,4 +284,86 @@ export async function updateClient(
   }
 
   return updatedClient;
+}
+// ==================================================
+// Delete Client
+// ==================================================
+
+export async function deleteClient(
+  clientId: string,
+) {
+  const [client] = await db
+    .select({
+      id:
+        clients.id,
+
+      name:
+        clients.name,
+    })
+    .from(clients)
+    .where(
+      eq(
+        clients.id,
+        clientId,
+      ),
+    )
+    .limit(1);
+
+  if (!client) {
+    throw new Error(
+      "Client was not found.",
+    );
+  }
+
+  const [assessmentCount] =
+    await db
+      .select({
+        count:
+          count(),
+      })
+      .from(assessments)
+      .where(
+        eq(
+          assessments.clientId,
+          client.id,
+        ),
+      );
+
+  const numberOfAssessments =
+    Number(
+      assessmentCount?.count ?? 0,
+    );
+
+  if (
+    numberOfAssessments > 0
+  ) {
+    throw new Error(
+      "Clients with assessment history cannot be deleted. Set the client to inactive instead.",
+    );
+  }
+
+  const [deletedClient] =
+    await db
+      .delete(clients)
+      .where(
+        eq(
+          clients.id,
+          client.id,
+        ),
+      )
+      .returning({
+        clientId:
+          clients.id,
+
+        clientName:
+          clients.name,
+      });
+
+  if (!deletedClient) {
+    throw new Error(
+      "Client could not be deleted.",
+    );
+  }
+
+  return deletedClient;
 }
