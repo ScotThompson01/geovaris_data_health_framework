@@ -74,8 +74,7 @@ export default function HomePage() {
               and AI readiness — and turning results into
               prioritized, actionable improvement plans.
             </p>
-
-            <div className="mt-10 flex flex-wrap gap-4">
+            <div className="mt-10 flex flex-wrap gap-3">
               <Link
                 href="/assessments"
                 className="rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 px-7 py-3.5 text-base font-semibold text-white shadow-lg transition hover:scale-[1.02]"
@@ -92,9 +91,16 @@ export default function HomePage() {
 
               <Link
                 href="/clients"
-                className="rounded-lg border border-purple-400 bg-slate-950/60 px-7 py-3.5 text-base font-semibold text-white backdrop-blur transition hover:bg-purple-950/70"
+                className="rounded-xl border border-purple-400 bg-slate-950/60 px-7 py-3.5 text-base font-semibold text-white backdrop-blur transition hover:bg-purple-950/70"
               >
                 Manage Clients
+              </Link>
+
+              <Link
+                href="/templates"
+                className="rounded-xl border border-purple-400 bg-slate-950/60 px-7 py-3.5 text-base font-semibold text-white backdrop-blur transition hover:bg-purple-950/70"
+              >
+                Manage Templates
               </Link>
             </div>
 

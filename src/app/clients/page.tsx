@@ -6,6 +6,12 @@ import {
   getClients,
 } from "@/db/repositories/client-repository";
 
+type ClientsPageProps = {
+  searchParams: Promise<{
+    status?: string;
+  }>;
+};
+
 function formatStatus(
   status: string,
 ) {
@@ -37,9 +43,48 @@ function formatDate(
   ).format(date);
 }
 
-export default async function ClientsPage() {
+export default async function ClientsPage({
+  searchParams,
+}: ClientsPageProps) {
+  const { status } =
+    await searchParams;
+
   const clients =
     await getClients();
+
+  const validStatuses = [
+    "active",
+    "inactive",
+  ];
+
+  const selectedStatus =
+    status &&
+    validStatuses.includes(
+      status,
+    )
+      ? status
+      : "all";
+
+  const filteredClients =
+    selectedStatus === "all"
+      ? clients
+      : clients.filter(
+          (client) =>
+            client.status ===
+            selectedStatus,
+        );
+
+  const activeClientCount =
+    clients.filter(
+      (client) =>
+        client.status === "active",
+    ).length;
+
+  const inactiveClientCount =
+    clients.filter(
+      (client) =>
+        client.status === "inactive",
+    ).length;
 
   return (
     <AppShell>
@@ -82,6 +127,43 @@ export default async function ClientsPage() {
           </Link>
         </div>
 
+        {/* Status Filter */}
+
+        <div className="mt-6 flex flex-wrap gap-2">
+          <Link
+            href="/clients"
+            className={
+              selectedStatus === "all"
+                ? "rounded-lg bg-brand-purple px-4 py-2 text-sm font-medium text-white"
+                : "rounded-lg border border-brand-border bg-white px-4 py-2 text-sm font-medium text-brand-text hover:bg-slate-50"
+            }
+          >
+            All
+          </Link>
+
+          <Link
+            href="/clients?status=active"
+            className={
+              selectedStatus === "active"
+                ? "rounded-lg bg-brand-purple px-4 py-2 text-sm font-medium text-white"
+                : "rounded-lg border border-brand-border bg-white px-4 py-2 text-sm font-medium text-brand-text hover:bg-slate-50"
+            }
+          >
+            Active
+          </Link>
+
+          <Link
+            href="/clients?status=inactive"
+            className={
+              selectedStatus === "inactive"
+                ? "rounded-lg bg-brand-purple px-4 py-2 text-sm font-medium text-white"
+                : "rounded-lg border border-brand-border bg-white px-4 py-2 text-sm font-medium text-brand-text hover:bg-slate-50"
+            }
+          >
+            Inactive
+          </Link>
+        </div>
+
         {/* Summary */}
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -101,12 +183,7 @@ export default async function ClientsPage() {
             </p>
 
             <p className="mt-1 text-2xl font-bold text-brand-text">
-              {
-                clients.filter(
-                  (client) =>
-                    client.status === "active",
-                ).length
-              }
+              {activeClientCount}
             </p>
           </div>
 
@@ -116,12 +193,7 @@ export default async function ClientsPage() {
             </p>
 
             <p className="mt-1 text-2xl font-bold text-brand-text">
-              {
-                clients.filter(
-                  (client) =>
-                    client.status !== "active",
-                ).length
-              }
+              {inactiveClientCount}
             </p>
           </div>
         </div>
@@ -140,15 +212,16 @@ export default async function ClientsPage() {
             </p>
           </div>
 
-          {clients.length === 0 ? (
+          {filteredClients.length === 0 ? (
             <div className="rounded-2xl border border-brand-border bg-white p-8 shadow-sm">
               <h3 className="font-semibold text-brand-text">
                 No clients found
               </h3>
 
               <p className="mt-2 text-brand-muted">
-                Create your first client to
-                begin managing assessments.
+                {selectedStatus === "all"
+                  ? "Create your first client to begin managing assessments."
+                  : `There are currently no ${selectedStatus} clients.`}
               </p>
             </div>
           ) : (
@@ -175,7 +248,7 @@ export default async function ClientsPage() {
                 </span>
               </div>
 
-              {clients.map(
+              {filteredClients.map(
                 (client) => (
                   <Link
                     key={
@@ -214,7 +287,7 @@ export default async function ClientsPage() {
                       <span
                         className={
                           client.status ===
-                            "active"
+                          "active"
                             ? "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
                             : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
                         }

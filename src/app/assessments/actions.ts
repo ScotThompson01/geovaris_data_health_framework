@@ -1,11 +1,17 @@
 "use server";
 
 import {
+  archiveCompletedAssessment,
+  deleteDraftAssessment,
+} from "@/db/repositories/assessment-repository";
+
+import {
   and,
   eq,
 } from "drizzle-orm";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { db } from "@/db/client";
 
@@ -214,9 +220,79 @@ export async function saveAssessmentResponse(
   // --------------------------------------------------
 
   await recalculateAssessmentScores(
-  assessment.id,
-);
+    assessment.id,
+  );
   revalidatePath(
     `/assessments/${assessmentCode}`,
+  );
+}
+// ==================================================
+// Delete Draft Assessment
+// ==================================================
+
+export async function deleteDraftAssessmentAction(
+  formData: FormData,
+) {
+  const assessmentId =
+    formData.get("assessmentId");
+
+  if (
+    typeof assessmentId !== "string" ||
+    !assessmentId
+  ) {
+    throw new Error(
+      "Assessment ID is required.",
+    );
+  }
+
+  await deleteDraftAssessment(
+    assessmentId,
+  );
+
+  revalidatePath(
+    "/assessments",
+  );
+
+  revalidatePath(
+    "/clients",
+  );
+
+  redirect(
+    "/assessments",
+  );
+}
+// ==================================================
+// Archive Completed Assessment
+// ==================================================
+
+export async function archiveCompletedAssessmentAction(
+  formData: FormData,
+) {
+  const assessmentId =
+    formData.get("assessmentId");
+
+  if (
+    typeof assessmentId !== "string" ||
+    !assessmentId
+  ) {
+    throw new Error(
+      "Assessment ID is required.",
+    );
+  }
+
+  await archiveCompletedAssessment(
+    assessmentId,
+  );
+
+  revalidatePath(
+    "/assessments",
+  );
+
+  revalidatePath(
+    "/clients",
+  );
+
+  redirect(
+    "/assessments",
   );
 }

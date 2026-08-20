@@ -1003,6 +1003,183 @@ export async function getAssessmentResultsByCode(
 }
 
 // ==================================================
+// Delete Draft Assessment
+// ==================================================
+
+export async function deleteDraftAssessment(
+  assessmentId: string,
+) {
+  const [assessment] = await db
+    .select({
+      id:
+        assessments.id,
+
+      status:
+        assessments.status,
+
+      assessmentCode:
+        assessments.assessmentCode,
+    })
+    .from(assessments)
+    .where(
+      eq(
+        assessments.id,
+        assessmentId,
+      ),
+    )
+    .limit(1);
+
+  if (!assessment) {
+    throw new Error(
+      "Assessment was not found.",
+    );
+  }
+
+  if (
+    assessment.status !== "draft"
+  ) {
+    throw new Error(
+      "Only draft assessments can be deleted.",
+    );
+  }
+
+  await db
+    .delete(
+      assessmentResponseScores,
+    )
+    .where(
+      eq(
+        assessmentResponseScores.assessmentId,
+        assessment.id,
+      ),
+    );
+
+  await db
+    .delete(
+      assessmentScores,
+    )
+    .where(
+      eq(
+        assessmentScores.assessmentId,
+        assessment.id,
+      ),
+    );
+
+  await db
+    .delete(
+      assessmentResponses,
+    )
+    .where(
+      eq(
+        assessmentResponses.assessmentId,
+        assessment.id,
+      ),
+    );
+
+  const [deletedAssessment] =
+    await db
+      .delete(assessments)
+      .where(
+        eq(
+          assessments.id,
+          assessment.id,
+        ),
+      )
+      .returning({
+        assessmentId:
+          assessments.id,
+
+        assessmentCode:
+          assessments.assessmentCode,
+      });
+
+  if (!deletedAssessment) {
+    throw new Error(
+      "Assessment could not be deleted.",
+    );
+  }
+
+  return deletedAssessment;
+}
+
+// ==================================================
+// Archive Completed Assessment
+// ==================================================
+
+export async function archiveCompletedAssessment(
+  assessmentId: string,
+) {
+  const [assessment] = await db
+    .select({
+      id:
+        assessments.id,
+
+      status:
+        assessments.status,
+
+      assessmentCode:
+        assessments.assessmentCode,
+    })
+    .from(assessments)
+    .where(
+      eq(
+        assessments.id,
+        assessmentId,
+      ),
+    )
+    .limit(1);
+
+  if (!assessment) {
+    throw new Error(
+      "Assessment was not found.",
+    );
+  }
+
+  if (
+    assessment.status !== "completed"
+  ) {
+    throw new Error(
+      "Only completed assessments can be archived.",
+    );
+  }
+
+  const [archivedAssessment] =
+    await db
+      .update(assessments)
+      .set({
+        status:
+          "archived",
+
+        updatedAt:
+          new Date(),
+      })
+      .where(
+        eq(
+          assessments.id,
+          assessment.id,
+        ),
+      )
+      .returning({
+        assessmentId:
+          assessments.id,
+
+        assessmentCode:
+          assessments.assessmentCode,
+
+        assessmentStatus:
+          assessments.status,
+      });
+
+  if (!archivedAssessment) {
+    throw new Error(
+      "Assessment could not be archived.",
+    );
+  }
+
+  return archivedAssessment;
+}
+
+// ==================================================
 // Assessment Creation Options
 // ==================================================
 
